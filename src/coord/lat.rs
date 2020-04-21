@@ -1,0 +1,688 @@
+use std::{
+    cmp::Ordering,
+    convert::{TryFrom, TryInto},
+    error::Error,
+    fmt,
+    ops::Neg,
+    str::FromStr,
+};
+
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
+use crate::{angle::Angle, try_from_tuples_and_arrays, utils::ToUnsigned};
+
+use super::{AngleAndDirection, FromSign, ParseCoordinateError, ParsedCoordinate};
+
+use self::Pole::{North, South};
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum Pole {
+    North,
+    South,
+}
+
+impl Neg for Pole {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        match self {
+            South => North,
+            North => South,
+        }
+    }
+}
+
+impl From<bool> for Pole {
+    fn from(above_equator: bool) -> Self {
+        if above_equator {
+            North
+        } else {
+            South
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct ParsePoleError {
+    failed: String,
+}
+
+impl fmt::Display for ParsePoleError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Cannot parse Pole from {:?}", self.failed)
+    }
+}
+
+impl Error for ParsePoleError {}
+
+impl FromStr for Pole {
+    type Err = ParsePoleError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "N" => Ok(North),
+            "S" => Ok(South),
+            _ => Err(ParsePoleError { failed: s.into() }),
+        }
+    }
+}
+
+impl TryFrom<char> for Pole {
+    type Error = ParsePoleError;
+
+    fn try_from(c: char) -> Result<Self, Self::Error> {
+        match c {
+            'N' => Ok(North),
+            'S' => Ok(South),
+            _ => Err(ParsePoleError {
+                failed: c.to_string(),
+            }),
+        }
+    }
+}
+
+impl FromSign for Pole {
+    fn from_sign(sign: char) -> Option<Self> {
+        match sign {
+            '+' => Some(North),
+            '-' => Some(South),
+            _ => None,
+        }
+    }
+}
+
+impl fmt::Display for Pole {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let pole_symbol = match self {
+            North => 'N',
+            South => 'S',
+        };
+        write!(f, "{}", pole_symbol)
+    }
+}
+
+/// The angle measured between the equatorial plane and the point along the meridian
+/// <https://en.wikipedia.org/wiki/Latitude>
+#[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Copy, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct Latitude<A: Angle>(A);
+
+impl<A: Angle> Latitude<A> {
+    /// Construct a northern latitude with some numeric information.
+    ///
+    /// # Errors
+    /// - cannot construct an angle from the given information (overflow of some kind)
+    /// - the constructed angle is more than the right angle
+    ///   (0 <= latitude <= 90 deg)
+    pub fn north<T>(angle: T) -> Result<Self, A::NumErr>
+    where
+        T: TryInto<A, Error = A::NumErr>,
+    {
+        angle
+            .try_into()
+            .and_then(|angle| Self::with_angle_and_direction(angle, North))
+    }
+
+    /// Construct a southern latitude with some numeric information.
+    ///
+    /// # Errors
+    /// - cannot construct an angle from the given information (overflow of some kind)
+    /// - the constructed angle is more than the right angle
+    ///   (0 <= latitude <= 90 deg)
+    pub fn south<T>(angle: T) -> Result<Self, A::NumErr>
+    where
+        T: TryInto<A, Error = A::NumErr>,
+    {
+        angle
+            .try_into()
+            .and_then(|angle| Self::with_angle_and_direction(angle, South))
+    }
+
+    /// The central latitude of the sphere equidistant from the poles
+    pub fn equator() -> Self {
+        Self(A::right())
+    }
+
+    /// Angle between the latitude and the equator (absolute value of the latitude).
+    pub fn angle_from_equator(self) -> A {
+        let from_south_pole = self.0;
+        let right = A::right();
+
+        right.abs_diff(from_south_pole)
+    }
+
+    /// Which pole are closer to the given latitude
+    pub fn hemisphere(self) -> Option<Pole> {
+        match self.cmp(&Self::equator()) {
+            Ordering::Less => Some(South),
+            Ordering::Equal => None,
+            Ordering::Greater => Some(North),
+        }
+    }
+
+    /// Is the given latitude belongs to a pole
+    pub fn is_pole(self) -> bool {
+        self == North.into() || self == South.into()
+    }
+}
+
+impl<A: Angle> Default for Latitude<A> {
+    fn default() -> Self {
+        Self::equator()
+    }
+}
+
+impl<A: Angle> AngleAndDirection<A> for Latitude<A> {
+    type Direction = Pole;
+
+    fn with_angle_and_direction(angle: A, hemisphere: Self::Direction) -> Result<Self, A::NumErr> {
+        if angle > A::right() {
+            return Err(A::obtuse_detected());
+        }
+
+        let angle = match hemisphere {
+            North => angle.checked_add(&A::right()),
+            South => angle.complement(),
+        }
+        .expect("Latitude is valid");
+
+        assert!(angle <= A::straight());
+        Ok(Self(angle))
+    }
+}
+
+impl<A: Angle> ParsedCoordinate<A> for Latitude<A>
+where
+    A: FromStr<Err = <A as Angle>::ParseErr>,
+    A::ParseErr: From<A::NumErr>,
+{
+    fn with_angle_only(angle: A) -> Option<Self> {
+        if angle.is_zero() {
+            Some(Self::equator())
+        } else {
+            None
+        }
+    }
+}
+
+impl<A: Angle> From<Pole> for Latitude<A> {
+    fn from(pole: Pole) -> Self {
+        let angle = match pole {
+            North => A::straight(),
+            South => A::zero(),
+        };
+        Self(angle)
+    }
+}
+
+impl<A: Angle> Neg for Latitude<A> {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        let angle = self.angle_from_equator();
+        let opposite_pole = match self.hemisphere() {
+            Some(pole) => -pole,
+            // just a convention for equator, it means nothing when constructing a Latitude
+            None => North,
+        };
+        Self::with_angle_and_direction(angle, opposite_pole)
+            .expect("Cannot construct the opposite latitude")
+    }
+}
+
+impl<A: Angle> TryFrom<f64> for Latitude<A> {
+    type Error = A::NumErr;
+
+    fn try_from(value: f64) -> Result<Self, Self::Error> {
+        let (value, is_north) = value.unsigned_abs();
+        let angle = value.try_into()?;
+        Self::with_angle_and_direction(angle, is_north.into())
+    }
+}
+
+impl<A: Angle> TryFrom<(i16, u8, u8, u16)> for Latitude<A>
+where
+    A: TryFrom<(u16, u8, u8, u16), Error = <A as Angle>::NumErr>,
+{
+    type Error = A::NumErr;
+
+    fn try_from(value: (i16, u8, u8, u16)) -> Result<Self, Self::Error> {
+        let (deg, min, sec, milli) = value;
+
+        let (deg, sign) = deg.unsigned_abs();
+        let angle = (deg, min, sec, milli).try_into()?;
+
+        Self::with_angle_and_direction(angle, sign.into())
+    }
+}
+
+mod partial_try_from {
+    use std::convert::{TryFrom, TryInto};
+
+    use crate::angle::dd::{AngleNotInRange, DegreeAngle};
+
+    use super::{Angle, Latitude};
+
+    //impl<A: Angle> TryFrom<[i16; 4]> for Latitude<A>
+    //where A: TryFrom<(u16, u8, u8, u16), Error = <A as Angle>::NumErr>,
+    impl TryFrom<[i16; 4]> for Latitude<DegreeAngle> {
+        type Error = <DegreeAngle as Angle>::NumErr;
+
+        fn try_from(value: [i16; 4]) -> Result<Self, Self::Error> {
+            let [deg, min, sec, mas] = value;
+            let min: u8 = min.try_into().map_err(|_| AngleNotInRange::ArcMinutes)?;
+            let sec: u8 = sec.try_into().map_err(|_| AngleNotInRange::ArcSeconds)?;
+            let mas: u16 = mas
+                .try_into()
+                .map_err(|_| AngleNotInRange::ArcMilliSeconds)?;
+            Self::try_from((deg, min, sec, mas))
+        }
+    }
+}
+
+try_from_tuples_and_arrays!((Latitude<A> where A: Angle, NumErr) <- i16, u8, u8, u16; i16);
+
+impl<A: Angle> FromStr for Latitude<A>
+where
+    A::ParseErr: From<A::NumErr>,
+{
+    type Err = ParseCoordinateError<A::ParseErr>;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::parse(s)
+    }
+}
+
+impl<A: Angle> fmt::Display for Latitude<A>
+where
+    A: fmt::Display,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let angle = self.angle_from_equator();
+        if f.alternate() {
+            write!(f, "{:#}", angle)?;
+
+            if let Some(hemisphere) = self.hemisphere() {
+                write!(f, "{:#}", hemisphere)
+            } else {
+                Ok(())
+            }
+        } else {
+            if let Some(South) = self.hemisphere() {
+                write!(f, "-")?;
+            }
+            write!(f, "{}", angle)
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::mem::size_of;
+
+    use crate::angle::{dd::DegreeAngle, AngleNames};
+
+    use super::*;
+
+    #[test]
+    fn size_lat() {
+        assert_eq!(size_of::<Latitude<DegreeAngle>>(), 4);
+    }
+
+    /// From south to north
+    /// <https://en.wikipedia.org/wiki/Circle_of_latitude>
+    fn common_earth_parallels() -> Vec<Latitude<DegreeAngle>> {
+        let south_pole = South.into();
+        let antarctic_circle = Latitude::with_angle_and_direction(
+            DegreeAngle::with_dms(66, 33, 48, 0).unwrap(),
+            South,
+        )
+        .unwrap();
+        let capricorn_tropic = [-23, 26, 12].try_into().unwrap();
+        let cancer_tropic = Latitude::north((23, 26, 12, 0)).unwrap();
+        let equator = Latitude::equator();
+        let arctic_circle = (66, 33, 48).try_into().unwrap();
+        let north_pole = North.into();
+
+        vec![
+            south_pole,
+            antarctic_circle,
+            capricorn_tropic,
+            equator,
+            cancer_tropic,
+            arctic_circle,
+            north_pole,
+        ]
+    }
+
+    #[test]
+    fn ordering() {
+        let from_south_no_north = common_earth_parallels();
+
+        // assert!(from_south_no_north.is_sorted());
+        let mut sorted = from_south_no_north.clone();
+        sorted.sort();
+        assert_eq!(from_south_no_north, sorted);
+    }
+
+    #[test]
+    fn south_less_than_north() {
+        let parallels = common_earth_parallels();
+
+        for (first, second) in common_earth_parallels().into_iter().skip(1).zip(parallels) {
+            dbg!(first);
+            dbg!(second);
+            assert!(first > second);
+        }
+    }
+
+    #[test]
+    fn parallels_symmetry() {
+        let parallels = common_earth_parallels();
+        // equator is in both
+        let half = parallels.len() / 2;
+        let (southern, northern) = if parallels.len() % 2 == 1 {
+            // overlay in the middle
+            (&parallels[..=half], &parallels[half..])
+        } else {
+            parallels.split_at(parallels.len() / 2)
+        };
+        assert_eq!(southern.len(), northern.len());
+
+        for (&s, &n) in southern.iter().rev().zip(northern) {
+            dbg!(s);
+            dbg!(n);
+            if s != Latitude::equator() {
+                assert_eq!(s.hemisphere(), Some(South));
+                assert_eq!(n.hemisphere(), Some(North));
+            }
+            assert_eq!(s.angle_from_equator(), n.angle_from_equator());
+            assert_eq!(-s, n);
+        }
+    }
+
+    #[test]
+    fn equal_equators() {
+        let equator = Latitude::equator();
+        let equator1 = Latitude::with_angle_and_direction(DegreeAngle::zero(), South).unwrap();
+        let equator2 = Latitude::with_angle_and_direction(DegreeAngle::zero(), North).unwrap();
+        let equator3 = 0.try_into().unwrap();
+
+        assert_eq!(equator, equator1);
+        assert_eq!(equator1, equator2);
+        assert_eq!(equator2, equator3);
+        assert!(equator3.angle_from_equator().is_zero());
+    }
+
+    #[test]
+    fn good_latitude_max() {
+        let l: Latitude<DegreeAngle> = 90.try_into().unwrap();
+        assert_eq!(Latitude::from(North), l)
+    }
+
+    #[test]
+    #[should_panic(expected = "ObtuseAngle")]
+    fn bad_latitude_max() {
+        let _l = Latitude::<DegreeAngle>::try_from(91).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "ObtuseAngle")]
+    fn bad_latitude_overflow() {
+        let angle: DegreeAngle = 100.try_into().unwrap();
+        let _l = Latitude::with_angle_and_direction(angle, North).unwrap();
+    }
+
+    #[test]
+    fn good_latitude_min() {
+        let l = (-90).try_into().unwrap();
+        assert_eq!(Latitude::from(South), l);
+
+        let l2: Latitude<DegreeAngle> = 90.try_into().unwrap();
+        assert_eq!(l, -l2);
+    }
+
+    #[test]
+    #[should_panic(expected = "ObtuseAngle")]
+    fn bad_latitude_min() {
+        let _l = Latitude::<DegreeAngle>::try_from(-91).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "ObtuseAngle")]
+    fn bad_latitude_underflow() {
+        let angle = DegreeAngle::with_dms(150, 0, 0, 0).unwrap();
+        let _l = Latitude::with_angle_and_direction(angle, South).unwrap();
+    }
+
+    #[test]
+    fn from_f64_north() {
+        let l = Latitude::<DegreeAngle>::try_from(41.622_512).unwrap();
+        assert_eq!(l.hemisphere(), Some(North));
+        assert!(l
+            .angle_from_equator()
+            .almost_equal(DegreeAngle::with_dms(41, 37, 21, 43).unwrap()));
+
+        let l2 = Latitude::north(41.622_512).unwrap();
+        assert_eq!(l, l2);
+    }
+
+    #[test]
+    fn from_f64_south() {
+        let l: Latitude<DegreeAngle> = (-84.120_456).try_into().unwrap();
+        assert_eq!(l.hemisphere(), Some(South));
+        assert!(l
+            .angle_from_equator()
+            .almost_equal(DegreeAngle::with_dms(84, 7, 13, 642).unwrap()));
+
+        let l2 = Latitude::south(84.120_456).unwrap();
+        assert_eq!(l, l2);
+    }
+
+    #[test]
+    #[should_panic(expected = "ObtuseAngle")]
+    fn from_f64_overflow() {
+        let _l = Latitude::<DegreeAngle>::try_from(91.622_512).unwrap();
+    }
+}
+
+#[cfg(test)]
+mod parse_tests {
+    use crate::angle::{dd::DegreeAngle, AngleNames};
+
+    use super::*;
+
+    #[test]
+    fn simple_degree() {
+        let l: Latitude<DegreeAngle> = "15° N".parse().unwrap();
+
+        assert_eq!(l.hemisphere(), Some(North));
+        assert_eq!(l.angle_from_equator(), DegreeAngle::try_from(15).unwrap());
+    }
+
+    #[test]
+    fn suffix_decimal() {
+        let l: Latitude<DegreeAngle> = "34.1551784° N".parse().unwrap();
+        let l_ascii: Latitude<DegreeAngle> = "34.1551784N".parse().unwrap();
+        assert_eq!(l_ascii, l);
+
+        assert_eq!(l.hemisphere(), Some(North));
+        assert_eq!(
+            l.angle_from_equator(),
+            DegreeAngle::try_from(34.155_178_4).unwrap()
+        );
+    }
+
+    #[test]
+    fn suffix_with_space() {
+        let l: Latitude<DegreeAngle> = "34°16′22″ N".parse().unwrap();
+        let l_ascii: Latitude<DegreeAngle> = "34* 16' 22\" N".parse().unwrap();
+        assert_eq!(l_ascii, l);
+
+        assert_eq!(l.hemisphere(), Some(North));
+        assert_eq!(
+            l.angle_from_equator(),
+            DegreeAngle::with_dms(34, 16, 22, 0).unwrap()
+        );
+    }
+
+    #[test]
+    fn suffix_no_space() {
+        let l: Latitude<DegreeAngle> = "43° 20′ 7.15″S".parse().unwrap();
+        let l_ascii: Latitude<DegreeAngle> = "43 20'7.15\"S".parse().unwrap();
+        assert_eq!(l_ascii, l);
+
+        assert_eq!(l.hemisphere(), Some(South));
+        assert_eq!(
+            l.angle_from_equator(),
+            DegreeAngle::with_dms(43, 20, 7, 150).unwrap()
+        );
+    }
+
+    #[test]
+    fn prefix_decimal() {
+        let l: Latitude<DegreeAngle> = "S 34.0045°".parse().unwrap();
+        let l_ascii: Latitude<DegreeAngle> = "S34.0045".parse().unwrap();
+        assert_eq!(l_ascii, l);
+
+        assert_eq!(l.hemisphere(), Some(South));
+        assert_eq!(
+            l.angle_from_equator(),
+            DegreeAngle::try_from(34.0045).unwrap()
+        );
+    }
+
+    #[test]
+    fn prefix_with_space() {
+        let l: Latitude<DegreeAngle> = "N 34°16′0″".parse().unwrap();
+        let l_ascii: Latitude<DegreeAngle> = "N 34* 16'".parse().unwrap();
+        assert_eq!(l_ascii, l);
+
+        assert_eq!(l.hemisphere(), Some(North));
+        assert_eq!(
+            l.angle_from_equator(),
+            DegreeAngle::with_dms(34, 16, 0, 0).unwrap()
+        );
+    }
+
+    #[test]
+    fn prefix_no_space() {
+        let l: Latitude<DegreeAngle> = "S89° 0′ 2.44″".parse().unwrap();
+        let l_ascii: Latitude<DegreeAngle> = "S89 0'2.44\"".parse().unwrap();
+        assert_eq!(l_ascii, l);
+
+        assert_eq!(l.hemisphere(), Some(South));
+        assert_eq!(
+            l.angle_from_equator(),
+            DegreeAngle::with_dms(89, 0, 2, 440).unwrap()
+        );
+    }
+
+    #[test]
+    fn prefix_sign_decimal() {
+        let l: Latitude<DegreeAngle> = "-34.0045°".parse().unwrap();
+        let l_ascii: Latitude<DegreeAngle> = "-34.0045".parse().unwrap();
+        assert_eq!(l_ascii, l);
+
+        assert_eq!(l.hemisphere(), Some(South));
+        assert_eq!(
+            l.angle_from_equator(),
+            DegreeAngle::try_from(34.0045).unwrap()
+        );
+    }
+
+    #[test]
+    fn prefix_sign_with_space() {
+        let l: Latitude<DegreeAngle> = "+34°16′0″".parse().unwrap();
+        let l_ascii: Latitude<DegreeAngle> = "+34 16'".parse().unwrap();
+        assert_eq!(l_ascii, l);
+
+        assert_eq!(l.hemisphere(), Some(North));
+        assert_eq!(
+            l.angle_from_equator(),
+            DegreeAngle::with_dms(34, 16, 0, 0).unwrap()
+        );
+    }
+
+    #[test]
+    fn prefix_sign_no_space() {
+        let l: Latitude<DegreeAngle> = "-89° 0′ 2.44″".parse().unwrap();
+        let l_ascii: Latitude<DegreeAngle> = "-89*0'2.44\"".parse().unwrap();
+        assert_eq!(l_ascii, l);
+
+        assert_eq!(l.hemisphere(), Some(South));
+        assert_eq!(
+            l.angle_from_equator(),
+            DegreeAngle::with_dms(89, 0, 2, 440).unwrap()
+        );
+    }
+
+    #[test]
+    fn equator_does_not_require_pole() {
+        let eq: Latitude<DegreeAngle> = "0°".parse().unwrap();
+        let eq2: Latitude<DegreeAngle> = "0".parse().unwrap();
+        let eq3: Latitude<DegreeAngle> = "0 0'".parse().unwrap();
+        assert_eq!(eq, eq2);
+        assert_eq!(eq2, eq3);
+        assert!(eq.angle_from_equator().is_zero());
+    }
+}
+
+#[cfg(test)]
+mod bad_parse_tests {
+    use crate::angle::dd::DegreeAngle;
+
+    use super::*;
+
+    #[test]
+    #[should_panic(expected = "NoHemisphere")]
+    fn no_prefix_no_suffix() {
+        let _l: Latitude<DegreeAngle> = "15°".parse().unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "EmptyString")]
+    fn empty() {
+        let _l: Latitude<DegreeAngle> = "".parse().unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "Angle(DmsNotation)")]
+    fn bad_sign() {
+        let _l: Latitude<DegreeAngle> = "--89° 16′".parse().unwrap();
+    }
+
+    #[test]
+    // if cannot parse the float, fallback to DMS, therefore
+    // not a `Float`, but `DmsNotation` variant
+    #[should_panic(expected = "Angle(DmsNotation)")]
+    fn bad_float() {
+        let _l: Latitude<DegreeAngle> = "-15.46.11".parse().unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "Angle(AngleNotInRange(ObtuseAngle))")]
+    fn too_big_angle_north() {
+        let _l: Latitude<DegreeAngle> = "+100°16′".parse().unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "Angle(AngleNotInRange(ObtuseAngle))")]
+    fn too_big_angle_south() {
+        let _l: Latitude<DegreeAngle> = "-92".parse().unwrap();
+    }
+
+    #[test]
+    fn round_more_than_7_digits() {
+        let l: Latitude<DegreeAngle> = "-18.99999995°".parse().unwrap();
+        // 90 - 18.9999999 = 70.0000001
+        assert_eq!(l.0, DegreeAngle::try_from(71.000_000_1).unwrap());
+    }
+
+    #[test]
+    #[should_panic(expected = "NoHemisphere")]
+    fn bad_hemisphere() {
+        let _l: Latitude<DegreeAngle> = "18.15Z°".parse().unwrap();
+    }
+}
