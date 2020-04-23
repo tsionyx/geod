@@ -14,15 +14,17 @@ jobs:
   fmt:
     name: Rustfmt on rust '${{ matrix.rust }}'
     runs-on: ubuntu-latest
-    strategy:
+    strategy: &only_stable
       matrix:
         rust:
           - stable
     steps:
-      - name: Checkout sources
-        uses: actions/checkout@v2
+      - &checkout
+        name: Checkout sources
+        uses:  actions/checkout@v2
 
-      - name: Install toolchain
+      - &toolchain
+        name: Install toolchain
         uses: actions-rs/toolchain@v1
         with:
           toolchain: ${{ matrix.rust }}
@@ -32,7 +34,7 @@ jobs:
         run: rustup component add rustfmt
 
       - name: Run cargo fmt
-        uses: actions-rs/cargo@v1
+        uses: &cargo actions-rs/cargo@v1
         with:
           command: fmt
           args: --all -- --check
@@ -40,40 +42,34 @@ jobs:
   test:
     name: Test Suite on rust '${{ matrix.rust }}'
     runs-on: ubuntu-latest
-    strategy:
+    strategy: &stable_and_1_38
       matrix:
         rust:
           - stable
           - 1.38.0
     steps:
-      - name: Checkout sources
-        uses: actions/checkout@v2
-
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: ${{ matrix.rust }}
-          override: true
+      - *checkout
+      - *toolchain
 
       - name: Generate Cargo.lock
-        uses: actions-rs/cargo@v1
+        uses: *cargo
         with:
           command: generate-lockfile
 
       - name: Cache cargo folder
-        uses: actions/cache@v1
+        uses: &cache actions/cache@v1
         with:
           path: ~/.cargo/
           key: ${{ runner.os }}-cargo-registry-${{ matrix.rust }}-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Cache cargo build
-        uses: actions/cache@v1
+        uses: *cache
         with:
           path: target
           key: ${{ runner.os }}-cargo-build-target-${{ matrix.rust }}-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Run cargo test
-        uses: actions-rs/cargo@v1
+        uses: *cargo
         with:
           command: test
           args: --all-features --all
@@ -82,41 +78,33 @@ jobs:
     name: Clippy on rust '${{ matrix.rust }}'
     runs-on: ubuntu-latest
     strategy:
-      matrix:
-        rust:
-          - stable
+      <<: *only_stable
     steps:
-      - name: Checkout sources
-        uses: actions/checkout@v2
-
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: ${{ matrix.rust }}
-          override: true
+      - *checkout
+      - *toolchain
 
       - name: Install clippy
         run: rustup component add clippy
 
       - name: Generate Cargo.lock
-        uses: actions-rs/cargo@v1
+        uses: *cargo
         with:
           command: generate-lockfile
 
       - name: Cache cargo folder
-        uses: actions/cache@v1
+        uses: *cache
         with:
           path: ~/.cargo/
           key: ${{ runner.os }}-cargo-registry-${{ matrix.rust }}-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Cache cargo build
-        uses: actions/cache@v1
+        uses: *cache
         with:
           path: target
           key: ${{ runner.os }}-cargo-build-target-${{ matrix.rust }}-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Run cargo clippy
-        uses: actions-rs/cargo@v1
+        uses: *cargo
         with:
           command: clippy
           args: --all-targets --all-features --all -- -Dwarnings -W clippy::nursery -W clippy::pedantic
