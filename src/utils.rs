@@ -1,6 +1,6 @@
 //! Utilities functions which do not linked to domain
 
-use std::ops::Neg;
+use std::ops::{Div, Neg, Rem};
 
 #[macro_export]
 /// Creates an array of given size from a slice
@@ -112,6 +112,26 @@ impl StripChar for &str {
     }
 }
 
+/// Division and remainder in one step
+pub fn div_mod<T>(divider: T, divisor: T) -> (T, T)
+where
+    T: Copy + Div<Output = T> + Rem<Output = T>,
+{
+    (divider / divisor, divider % divisor)
+}
+
+/// Round up the integer division when the remainder is big enough
+pub fn div_with_round(x: u64, y: u64) -> u64 {
+    let (quot, rem) = div_mod(x, y);
+    if rem > (y >> 1) {
+        // > 0.5 rounds up
+        quot + 1
+    } else {
+        // <= 0.5 rounds down
+        quot
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -185,5 +205,11 @@ mod tests {
     fn split_tail_single() {
         let s = "Y";
         assert_eq!(s.split_last().unwrap(), (String::new(), 'Y'));
+    }
+
+    #[test]
+    fn test_div_mod() {
+        assert_eq!(div_mod(15, 4), (3, 3));
+        assert_eq!(div_mod(-100, 7), (-14, -2));
     }
 }

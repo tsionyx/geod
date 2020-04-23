@@ -17,7 +17,10 @@ use regex::Regex;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use crate::{enum_trivial_from_impl, try_from_tuples_and_arrays, utils::StripChar};
+use crate::{
+    enum_trivial_from_impl, try_from_tuples_and_arrays,
+    utils::{div_mod, div_with_round, StripChar},
+};
 
 use super::{Angle, AngleNames};
 
@@ -91,7 +94,7 @@ impl Add for DegreeAngle {
         // the sum can overflow u32, so convert everything to u64
         let self_ = u64::from(self.units());
         let rhs = u64::from(rhs.units());
-        let max = u64::from(Self::complete().units());
+        let max = u64::from(Self::max_units());
         assert!(self_ <= max);
         assert!(rhs <= max);
         assert!(self_ + rhs > max);
@@ -108,7 +111,7 @@ impl CheckedAdd for DegreeAngle {
     fn checked_add(&self, rhs: &Self) -> Option<Self> {
         self.units()
             .checked_add(rhs.units())
-            .filter(|&sum_units| sum_units <= Self::complete().units())
+            .filter(|&sum_units| sum_units <= Self::max_units())
             .and_then(|units| Self::with_units(units).ok())
     }
 }
@@ -125,7 +128,7 @@ impl Sub for DegreeAngle {
         let rhs = rhs.units();
         assert!(self_ < rhs);
 
-        let max = Self::complete().units();
+        let max = Self::max_units();
 
         let diff = max - (rhs - self_);
         Self::with_units(diff).expect("The diff is less than the max angle")
@@ -182,7 +185,7 @@ impl DegreeAngle {
     }
 
     fn max_units() -> u32 {
-        Self::units_in_deg() * u32::from(MAX_DEGREE)
+        Self::complete().units()
     }
 
     fn mas_in_deg() -> u32 {
@@ -242,13 +245,10 @@ impl DegreeAngle {
         let num = Self::units_in_deg();
         let denom = Self::mas_in_deg();
 
-        let total_mas_as_fraction =
-            (u64::from(total_mas) * u64::from(num)) as f64 / f64::from(denom);
-
-        // TODO: let hebdo_degrees_in_mas = num_rational::Ratio::new(fraction_multiplier, mas_in_deg).reduce();
-        //       let total_mas_as_fraction = (total_mas) * r.nom).round_div(r.denom);
-
-        let fraction = total_mas_as_fraction.round() as u32;
+        let as_units = div_with_round(u64::from(total_mas) * u64::from(num), u64::from(denom));
+        let fraction = as_units
+            .try_into()
+            .map_err(|_| AngleNotInRange::ArcMinutes)?;
         Self::with_deg_and_micro(degree, fraction)
     }
 
@@ -308,12 +308,12 @@ impl DegreeAngle {
 
     /// The arc minutes component of the angle.
     pub fn arc_minutes(self) -> u8 {
-        self.dms_parts(false).1
+        self.dms_parts(true).1
     }
 
     /// The arc seconds component of the angle.
     pub fn arc_seconds(self) -> u8 {
-        self.dms_parts(false).2
+        self.dms_parts(true).2
     }
 
     /// Get the milli arc seconds (1/1000-th of the arc second) component of the angle.
@@ -323,11 +323,11 @@ impl DegreeAngle {
     /// To get the precise values in such a boundary condition,
     /// use the `self.deg_min_sec_mas()` instead.
     pub fn milli_arc_seconds(self) -> u16 {
-        self.dms_parts(false).3
+        self.dms_parts(true).3
     }
 
-    /// If `precise` is true, overflow in minutes will be added to degrees
-    fn dms_parts(self, precise: bool) -> (u16, u8, u8, u16) {
+    /// If `match_degrees` is false, overflow in minutes will be added to degrees
+    fn dms_parts(self, match_degrees: bool) -> (u16, u8, u8, u16) {
         // prevent further multiplication overflow by extending precision
         let fraction_units = u64::from(self.fract());
         let units_in_deg = u64::from(Self::units_in_deg());
@@ -338,28 +338,31 @@ impl DegreeAngle {
         let sec_in_deg = sec_in_min * min_in_deg;
         let milli_in_deg = milli * sec_in_deg;
 
-        let minutes = fraction_units * min_in_deg / units_in_deg;
-
-        let total_seconds = fraction_units * sec_in_deg / units_in_deg;
-        let sec = total_seconds - sec_in_min * minutes;
-
-        // workaround for bad conversion of 10 micro-degrees into 3.6 milli-seconds
-        let total_milli =
-            ((fraction_units * milli_in_deg) as f64 / units_in_deg as f64).round() as u64;
-        let mas = total_milli - milli * total_seconds;
+        let total_milli = div_with_round(fraction_units * milli_in_deg, units_in_deg);
+        let (total_seconds, mas) = div_mod(total_milli, milli);
+        let (total_minutes, sec) = div_mod(total_seconds, sec_in_min);
+        let (deg_overflow, minutes) = div_mod(total_minutes, min_in_deg);
 
         let minutes = minutes.try_into().expect("Overflow in minutes");
         let sec = sec.try_into().expect("Overflow in seconds");
         let mas = mas.try_into().expect("Overflow in milli seconds");
 
-        let deg = self.degrees();
-        if let Some((minutes, sec, mas)) = Self::adjust_overflow(minutes, sec, mas) {
-            (deg, minutes, sec, mas)
-        } else if precise {
-            (deg + 1, 0, 0, 0)
-        } else {
-            (deg, minutes, sec, mas - 1)
+        let mut deg = self.degrees();
+        if deg_overflow > 0 {
+            assert_eq!(deg_overflow, 1);
+            assert_eq!(minutes, 0);
+            assert_eq!(sec, 0);
+            assert_eq!(mas, 0);
+            if match_degrees {
+                // subtract minimal DMS to prevent overflow in degrees
+                let min_dms = Self::with_dms(0, 0, 0, 1).expect("Min DMS is valid");
+                // `match_degrees=false` to prevent any possibility of the recursive call
+                return (self - min_dms).dms_parts(false);
+            }
+            deg += 1;
         }
+
+        (deg, minutes, sec, mas)
     }
 
     /// Parts of the angle as DMS scheme.
@@ -371,26 +374,7 @@ impl DegreeAngle {
     /// for angle `35.9999999` the `degrees()` function returns 35
     /// but the `deg_min_sec_mas()` returns (36, 0, 0, 0) due to rounding rules
     pub fn deg_min_sec_mas(self) -> (u16, u8, u8, u16) {
-        self.dms_parts(true)
-    }
-
-    fn adjust_overflow(mut min: u8, mut sec: u8, mut mas: u16) -> Option<(u8, u8, u16)> {
-        if mas == MILLI {
-            mas = 0;
-            sec += 1;
-        }
-
-        if sec == SECONDS_IN_MINUTE {
-            sec = 0;
-            min += 1;
-        }
-
-        if min == MINUTES_IN_DEGREE {
-            // overflow!!!
-            return None;
-        }
-
-        Some((min, sec, mas))
+        self.dms_parts(false)
     }
 
     const fn units(self) -> u32 {
@@ -417,9 +401,11 @@ impl TryFrom<f64> for DegreeAngle {
         let integer = value.floor() as u64;
         let integer = integer.try_into().map_err(|_| AngleNotInRange::Degrees)?;
 
-        let fraction = value.fract();
         let precision = Self::units_in_deg();
-        let fraction = (fraction * f64::from(precision)).round() as u32;
+        let fraction = (value.fract() * f64::from(precision)).round() as u64;
+        let fraction = fraction
+            .try_into()
+            .map_err(|_| AngleNotInRange::DegreeFraction)?;
 
         // fraction part of the value rounds up to 1
         if fraction == precision {
@@ -883,7 +869,7 @@ mod tests {
         // slightly less than the real value, but the degrees is still 30
         assert_eq!(angle.milli_arc_seconds(), 999);
 
-        let parts_with_the_same_degree_value = angle.dms_parts(false);
+        let parts_with_the_same_degree_value = angle.dms_parts(true);
         assert_eq!(parts_with_the_same_degree_value, (30, 59, 59, 999)); // not really correct
 
         let parts_with_the_increased_degree = angle.deg_min_sec_mas();
