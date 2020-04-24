@@ -36,6 +36,7 @@
 // suppress some pedantic warnings
 #![allow(clippy::non_ascii_literal)]
 #![allow(clippy::must_use_candidate)]
+#![cfg_attr(test, allow(clippy::wildcard_imports))]
 // TODO: disable these casts warnings
 #![allow(clippy::cast_possible_truncation)]
 #![allow(clippy::cast_sign_loss)]

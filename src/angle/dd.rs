@@ -1,5 +1,12 @@
-//! Implements angle as the degree and its decimal fraction.
+//! The angle implementation can be used to store and operate (addition, subtraction)
+//! on degrees with their decimal fractions with the hebdo (10^-7) precision.
 //! <https://en.wikipedia.org/wiki/Decimal_degrees>
+//!
+//! It also can be used to operate in terms of or DMS (degrees, minutes, seconds)
+//! with the milli (1/1000-th) of arc second precision.
+//! However, DMS operations are always approximate and can accumulate an error.
+//! E.g. summing up 10 angles of the 1 milliarcsecond will get you an angle of 11 milliarcseconds
+//! (see `summing_dms_accumulate_errors` test).
 
 use std::{
     borrow::Cow,
@@ -19,7 +26,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     enum_trivial_from_impl, try_from_tuples_and_arrays,
-    utils::{div_mod, div_with_round, StripChar},
+    utils::{div_mod, pow_10, RoundDiv, StripChar},
 };
 
 use super::{Angle, AngleNames};
@@ -60,7 +67,8 @@ impl Error for AngleNotInRange {}
 const MAX_DEGREE: u16 = 360;
 const MINUTES_IN_DEGREE: u8 = 60;
 const SECONDS_IN_MINUTE: u8 = 60;
-const MILLI: u16 = 1000;
+const SECONDS_FD: usize = 3;
+const THOUSAND: u32 = pow_10(SECONDS_FD);
 
 const DEGREE_SIGN: char = '°';
 const ARC_MINUTE_SIGN: char = '′';
@@ -178,7 +186,7 @@ impl DegreeAngle {
     // the number of decimal digits
     const PRECISION: u8 = 7;
 
-    // TODO: make the three following `const` when the `pow` becomes stable
+    // TODO: make the two following `const` when the `pow` becomes stable
 
     fn units_in_deg() -> u32 {
         10_u32.pow(Self::PRECISION.into())
@@ -189,7 +197,7 @@ impl DegreeAngle {
     }
 
     fn mas_in_deg() -> u32 {
-        let milli = u32::from(MILLI);
+        let milli = THOUSAND;
         let sec_in_min = u32::from(SECONDS_IN_MINUTE);
         let min_in_deg = u32::from(MINUTES_IN_DEGREE);
         let sec_in_deg = sec_in_min * min_in_deg;
@@ -234,7 +242,7 @@ impl DegreeAngle {
         Self::check_dms(degree, minutes, seconds, milli_seconds)?;
 
         // prevent further multiplication overflow by extending precision
-        let milli = u32::from(MILLI);
+        let milli = THOUSAND;
         let sec_in_min = u32::from(SECONDS_IN_MINUTE);
 
         // max is (3600 * 1000)
@@ -245,7 +253,7 @@ impl DegreeAngle {
         let num = Self::units_in_deg();
         let denom = Self::mas_in_deg();
 
-        let as_units = div_with_round(u64::from(total_mas) * u64::from(num), u64::from(denom));
+        let as_units = (u64::from(total_mas) * u64::from(num)).div_round(u64::from(denom));
         let fraction = as_units
             .try_into()
             .map_err(|_| AngleNotInRange::ArcMinutes)?;
@@ -266,7 +274,11 @@ impl DegreeAngle {
         let (valid_minutes, valid_seconds, valid_milli) = if degree == MAX_DEGREE {
             (0..1, 0..1, 0..1)
         } else {
-            (0..MINUTES_IN_DEGREE, 0..SECONDS_IN_MINUTE, 0..MILLI)
+            (
+                0..MINUTES_IN_DEGREE,
+                0..SECONDS_IN_MINUTE,
+                0..(THOUSAND as u16),
+            )
         };
 
         if !valid_minutes.contains(&minutes) {
@@ -332,13 +344,13 @@ impl DegreeAngle {
         let fraction_units = u64::from(self.fract());
         let units_in_deg = u64::from(Self::units_in_deg());
 
-        let milli = u64::from(MILLI);
+        let milli = u64::from(THOUSAND);
         let sec_in_min = u64::from(SECONDS_IN_MINUTE);
         let min_in_deg = u64::from(MINUTES_IN_DEGREE);
         let sec_in_deg = sec_in_min * min_in_deg;
         let milli_in_deg = milli * sec_in_deg;
 
-        let total_milli = div_with_round(fraction_units * milli_in_deg, units_in_deg);
+        let total_milli = (fraction_units * milli_in_deg).div_round(units_in_deg);
         let (total_seconds, mas) = div_mod(total_milli, milli);
         let (total_minutes, sec) = div_mod(total_seconds, sec_in_min);
         let (deg_overflow, minutes) = div_mod(total_minutes, min_in_deg);
@@ -459,9 +471,9 @@ impl FromStr for DegreeAngle {
 }
 
 lazy_static! {
-    static ref RE_UNICODE: Regex = Regex::new(r#"(?x) # enables verbose mode
+    static ref RE_UNICODE: Regex = Regex::new(&format!(r#"(?x) # enables verbose mode
         ^                                           # match the whole line from the start
-        (?P<deg>[123]?\d{1,2})                          # mandatory degree VALUE (0..=399) - requires more validation!
+        (?P<deg>[123]?\d{{1,2}})                        # mandatory degree VALUE (0..=399) - requires more validation!
         °                                               # mandatory degree sign
         (?:\x20?                                        # minutes and seconds group optionally started with the space
             (?P<min>[0-5]?\d)                               # minutes VALUE (0..=59)
@@ -469,17 +481,17 @@ lazy_static! {
             (?:\x20?                                        # seconds and milliseconds group optionally started with the space
                 (?P<sec>[0-5]?\d)                               # whole seconds VALUE (0..=59)
                 (?:                                             # milliseconds with the decimal dot
-                    \.(?P<mas>\d{1,3})                              # milliseconds VALUE (up to 3 digits, 0..=999)
+                    \.(?P<mas>\d{{1,{precision}}})                  # milliseconds VALUE (up to [precision] digits, 0..=99)
                 )?                                              # milliseconds are optional
                 ″                                            # arcsecond sign
             )?                                              # seconds are optional
         )?                                              # minutes and seconds are optional
         $                                           # match the whole line till the end
-        "#).expect("This regex is valid");
+        "#, precision=SECONDS_FD)).expect("This regex is valid");
 
-    static ref RE_ASCII: Regex = Regex::new(r#"(?x) # enables verbose mode
+    static ref RE_ASCII: Regex = Regex::new(&format!(r#"(?x) # enables verbose mode
         ^                                           # match the whole line from the start
-        (?P<deg>[123]?\d{1,2})                          # mandatory degree VALUE (0..=399) - requires more validation!
+        (?P<deg>[123]?\d{{1,2}})                        # mandatory degree VALUE (0..=399) - requires more validation!
         \*?                                             # optional degree sign (asterisk)
         (?:\x20?                                        # minutes and seconds group optionally started with the space
             (?P<min>[0-5]?\d)                               # minutes VALUE (0..=59)
@@ -487,13 +499,13 @@ lazy_static! {
             (?:\x20?                                        # seconds and milliseconds group optionally started with the space
                 (?P<sec>[0-5]?\d)                               # whole seconds VALUE (0..=59)
                 (?:                                             # milliseconds with the decimal dot
-                    \.(?P<mas>\d{1,3})                              # milliseconds VALUE (up to 3 digits, 0..=999)
+                    \.(?P<mas>\d{{1,{precision}}})                  # milliseconds VALUE (up to [precision] digits, 0..=99)
                 )?                                              # milliseconds are optional
                 "                                               # arcsecond sign
             )?                                              # seconds are optional
         )?                                              # minutes and seconds are optional
         $                                           # match the whole line till the end
-        "#).expect("This regex is valid");
+        "#, precision=SECONDS_FD)).expect("This regex is valid");
 }
 
 impl DegreeAngle {
@@ -508,10 +520,12 @@ impl DegreeAngle {
         dbg!(&capture);
         let min = capture.name("min").map_or("0", |m| m.as_str()).parse()?;
         let sec = capture.name("sec").map_or("0", |m| m.as_str()).parse()?;
-        let mas = capture
-            .name("mas")
-            .map_or_else(|| "0".into(), |m| format!("{:0<3}", m.as_str()))
-            .parse()?;
+        let mas = if let Some(capture) = capture.name("mas") {
+            let mas = format!("{:0<width$}", capture.as_str(), width = SECONDS_FD);
+            mas.parse()?
+        } else {
+            0
+        };
 
         let good = Self::with_dms(deg, min, sec, mas)?;
         Ok(good)
@@ -533,7 +547,7 @@ impl fmt::Display for DegreeAngle {
                 if mas == 0 {
                     write!(f, "{}{}", arc_sec, ARC_SECOND_SIGN)
                 } else {
-                    let arc_sec = f64::from(arc_sec) + f64::from(mas) / f64::from(MILLI);
+                    let arc_sec = f64::from(arc_sec) + f64::from(mas) / f64::from(THOUSAND);
                     write!(f, "{}{}", arc_sec, ARC_SECOND_SIGN)
                 }
             } else {
@@ -1097,6 +1111,20 @@ mod tests {
             .and_then(|sub| sub.checked_add(&min))
             .unwrap();
         assert!(res.is_straight());
+    }
+
+    #[test]
+    #[should_panic(expected = "assertion failed")]
+    fn summing_dms_accumulate_errors() {
+        let min = DegreeAngle::with_dms(0, 0, 0, 1).unwrap();
+
+        let mut acc = DegreeAngle::zero();
+
+        for _ in 0..10 {
+            acc = acc + min;
+        }
+
+        assert_eq!(acc.milli_arc_seconds(), 10);
     }
 
     #[test]

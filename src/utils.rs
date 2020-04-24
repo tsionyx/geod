@@ -41,7 +41,7 @@ pub(crate) trait ToUnsigned<U>: Default + Copy + PartialOrd + Neg<Output = Self>
 }
 
 macro_rules! impl_unsigned_abs {
-    ($from: tt -> $to: tt) => {
+    ($from: tt -> $to: ty) => {
         impl ToUnsigned<$to> for $from {
             fn as_type(self) -> $to {
                 self as $to
@@ -49,7 +49,7 @@ macro_rules! impl_unsigned_abs {
         }
     };
 
-    ($same: tt) => {
+    ($same: ty) => {
         impl ToUnsigned<$same> for $same {
             fn as_type(self) -> Self {
                 self
@@ -121,15 +121,46 @@ where
 }
 
 /// Round up the integer division when the remainder is big enough
-pub fn div_with_round(x: u64, y: u64) -> u64 {
-    let (quot, rem) = div_mod(x, y);
-    if rem > (y >> 1) {
-        // > 0.5 rounds up
-        quot + 1
-    } else {
-        // <= 0.5 rounds down
-        quot
-    }
+pub trait RoundDiv {
+    fn div_round(self, y: Self) -> Self;
+}
+
+macro_rules! impl_round_div {
+    ($t: ty) => {
+        impl RoundDiv for $t {
+            fn div_round(self, y: Self) -> Self {
+                let (quot, rem) = div_mod(self, y);
+                if rem > (y >> 1) {
+                    // > 0.5 rounds up
+                    quot + 1
+                } else {
+                    // <= 0.5 rounds down
+                    quot
+                }
+            }
+        }
+    };
+}
+
+impl_round_div!(u32);
+impl_round_div!(u64);
+
+const POW_10: [u32; 10] = [
+    1_u32,
+    10,
+    100,
+    1_000,
+    10_000,
+    100_000,
+    1_000_000,
+    10_000_000,
+    100_000_000,
+    1_000_000_000,
+];
+
+/// The powers of 10
+pub const fn pow_10(pow: usize) -> u32 {
+    POW_10[pow]
 }
 
 #[cfg(test)]
