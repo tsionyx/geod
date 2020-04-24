@@ -4,6 +4,7 @@ use std::{convert::TryFrom, error::Error, str::FromStr};
 
 use num_traits::{CheckedAdd, CheckedSub};
 
+mod common;
 mod consts;
 pub mod dd;
 pub mod dms_dd;

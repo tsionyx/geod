@@ -23,11 +23,12 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    try_from_tuples_and_arrays,
+    impl_angle_ops, try_from_tuples_and_arrays,
     utils::{div_mod, pow_10, RoundDiv, StripChar},
 };
 
 use super::{
+    common::UnitsAngle,
     consts::{
         ARC_MINUTE_SIGN, ARC_SECOND_SIGN, DEGREE_SIGN, FULL_TURN_DEG, HALF_TURN_DEG, MAX_DEGREE,
         MINUTES_IN_DEGREE, QUARTER_TURN_DEG, SECONDS_IN_MINUTE,
@@ -52,66 +53,6 @@ pub struct DegreeAngle {
     units: u32,
 }
 
-impl Add for DegreeAngle {
-    type Output = Self;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        if let Some(sum) = self.checked_add(&rhs) {
-            return sum;
-        }
-
-        // the sum can overflow u32, so convert everything to u64
-        let self_ = u64::from(self.units());
-        let rhs = u64::from(rhs.units());
-        let max = u64::from(Self::max_units());
-        assert!(self_ <= max);
-        assert!(rhs <= max);
-        assert!(self_ + rhs > max);
-
-        (self_ + rhs - max)
-            .try_into()
-            .map_err(|_| AngleNotInRange::Degrees)
-            .and_then(Self::with_units)
-            .expect("Wrapping sum around the max degree is always a valid degree")
-    }
-}
-
-impl CheckedAdd for DegreeAngle {
-    fn checked_add(&self, rhs: &Self) -> Option<Self> {
-        self.units()
-            .checked_add(rhs.units())
-            .filter(|&sum_units| sum_units <= Self::max_units())
-            .and_then(|units| Self::with_units(units).ok())
-    }
-}
-
-impl Sub for DegreeAngle {
-    type Output = Self;
-
-    fn sub(self, rhs: Self) -> Self::Output {
-        if let Some(diff) = self.checked_sub(&rhs) {
-            return diff;
-        }
-
-        let self_ = self.units();
-        let rhs = rhs.units();
-        assert!(self_ < rhs);
-
-        let max = Self::max_units();
-
-        let diff = max - (rhs - self_);
-        Self::with_units(diff).expect("The diff is less than the max angle")
-    }
-}
-
-impl CheckedSub for DegreeAngle {
-    fn checked_sub(&self, rhs: &Self) -> Option<Self> {
-        self.units()
-            .checked_sub(rhs.units())
-            .and_then(|units| Self::with_units(units).ok())
-    }
-}
-
 impl AngleNames for DegreeAngle {
     fn zero() -> Self {
         Self::default()
@@ -127,6 +68,30 @@ impl AngleNames for DegreeAngle {
 
     fn complete() -> Self {
         Self::try_from(FULL_TURN_DEG).expect("Complete angle is valid")
+    }
+}
+
+impl_angle_ops!(DegreeAngle);
+
+impl Deg for DegreeAngle {
+    type Units = u32;
+
+    fn with_units(total_micro_degrees: Self::Units) -> Result<Self, AngleNotInRange> {
+        if total_micro_degrees > Self::max_units() {
+            return Err(AngleNotInRange::Degrees);
+        }
+
+        Ok(Self {
+            units: total_micro_degrees,
+        })
+    }
+
+    fn units(self) -> Self::Units {
+        self.units
+    }
+
+    fn max_units() -> Self::Units {
+        Self::complete().units()
     }
 }
 
@@ -151,10 +116,6 @@ impl DegreeAngle {
 
     fn units_in_deg() -> u32 {
         10_u32.pow(Self::PRECISION.into())
-    }
-
-    fn max_units() -> u32 {
-        Self::complete().units()
     }
 
     fn mas_in_deg() -> u32 {
@@ -256,17 +217,6 @@ impl DegreeAngle {
 
         Ok(())
     }
-
-    fn with_units(total_micro_degrees: u32) -> Result<Self, AngleNotInRange> {
-        if total_micro_degrees > Self::max_units() {
-            return Err(AngleNotInRange::Degrees);
-        }
-
-        Ok(Self {
-            units: total_micro_degrees,
-        })
-    }
-
     /// The whole number of degrees in the angle
     pub fn degrees(self) -> u16 {
         let degrees = self.units / Self::units_in_deg();
@@ -348,10 +298,6 @@ impl DegreeAngle {
     /// but the `deg_min_sec_mas()` returns (36, 0, 0, 0) due to rounding rules
     pub fn deg_min_sec_mas(self) -> (u16, u8, u8, u16) {
         self.dms_parts(false)
-    }
-
-    const fn units(self) -> u32 {
-        self.units
     }
 
     /// As the decimal representation is 2.777 times more precise,
