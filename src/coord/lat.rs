@@ -260,7 +260,7 @@ where
 mod partial_try_from {
     use std::convert::{TryFrom, TryInto};
 
-    use crate::angle::dd::{AngleNotInRange, DegreeAngle};
+    use crate::angle::{dd::DegreeAngle, AngleNotInRange};
 
     use super::{Angle, Latitude};
 

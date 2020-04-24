@@ -4,8 +4,12 @@ use std::{convert::TryFrom, error::Error, str::FromStr};
 
 use num_traits::{CheckedAdd, CheckedSub};
 
+mod consts;
 pub mod dd;
 pub mod dms_dd;
+mod errors;
+
+pub use errors::AngleNotInRange;
 
 #[allow(clippy::module_name_repetitions)]
 /// Common terminology for angles

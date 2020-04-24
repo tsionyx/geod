@@ -10,9 +10,7 @@
 use std::{
     borrow::Cow,
     convert::{TryFrom, TryInto},
-    error::Error,
     fmt,
-    num::{ParseFloatError, ParseIntError},
     ops::{Add, Sub},
     str::FromStr,
 };
@@ -24,58 +22,21 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    enum_trivial_from_impl, try_from_tuples_and_arrays,
+    try_from_tuples_and_arrays,
     utils::{div_mod, pow_10, RoundDiv, StripChar},
 };
 
-use super::{Angle, AngleNames};
+use super::{
+    consts::{
+        ARC_MINUTE_SIGN, ARC_SECOND_SIGN, DEGREE_SIGN, FULL_TURN_DEG, HALF_TURN_DEG, MAX_DEGREE,
+        MINUTES_IN_DEGREE, QUARTER_TURN_DEG, SECONDS_IN_MINUTE,
+    },
+    errors::{AngleNotInRange, ParseAngleError},
+    Angle, AngleNames,
+};
 
-#[derive(Debug, Copy, Clone)]
-pub enum AngleNotInRange {
-    Degrees,         // deg > 360
-    ReflexAngle,     // deg > 180
-    ObtuseAngle,     // deg > 90
-    ArcMinutes,      // min >= 60
-    ArcSeconds,      // sec >= 60
-    ArcCentiSeconds, // cas >= 100
-    MicroDegrees,    // microdeg >= 10^6
-}
-
-impl fmt::Display for AngleNotInRange {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let msg = match self {
-            Self::Degrees => "Too big value for degrees part of an angle (max is 360)",
-            Self::ReflexAngle => {
-                "Only straight angles or less (<=180) are allowed, but reflex one provided"
-            }
-            Self::ObtuseAngle => {
-                "Only right angles or less (<=90) are allowed, but obtuse one provided"
-            }
-            Self::MicroDegrees => "Micro degrees exceeds maximum",
-            Self::ArcMinutes => "Angle's arc minute value not in range [0..60)",
-            Self::ArcSeconds => "Angle's arc second value not in range [0..60)",
-            Self::ArcCentiSeconds => "Angle's arc centisecond should be less than 100",
-        };
-
-        write!(f, "{}", msg)
-    }
-}
-
-impl Error for AngleNotInRange {}
-
-const MAX_DEGREE: u16 = 360;
-const MINUTES_IN_DEGREE: u8 = 60;
-const SECONDS_IN_MINUTE: u8 = 60;
 const SECONDS_FD: usize = 2;
 const HUNDRED: u32 = pow_10(SECONDS_FD);
-
-const DEGREE_SIGN: char = '°';
-const ARC_MINUTE_SIGN: char = '′';
-const ARC_SECOND_SIGN: char = '″';
-
-const FULL_TURN_DEG: u16 = MAX_DEGREE;
-const HALF_TURN_DEG: u16 = FULL_TURN_DEG >> 1;
-const QUARTER_TURN_DEG: u16 = HALF_TURN_DEG >> 1;
 
 /// Coordinate with the additional precision.
 /// E.g. the length of the Earth's equator arc second is roughly 30m,
@@ -438,33 +399,6 @@ impl TryFrom<f64> for DegreeAngle {
         }
     }
 }
-
-#[derive(Debug)]
-pub enum ParseAngleError {
-    AngleNotInRange(AngleNotInRange),
-    Float(ParseFloatError),
-    // this variant is practically impossible due to regex digits limitations
-    Int(ParseIntError),
-    DmsNotation,
-}
-
-enum_trivial_from_impl!(AngleNotInRange => ParseAngleError:AngleNotInRange);
-enum_trivial_from_impl!(ParseFloatError => ParseAngleError:Float);
-enum_trivial_from_impl!(ParseIntError => ParseAngleError:Int);
-
-impl fmt::Display for ParseAngleError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Cannot parse angle: ")?;
-        match self {
-            Self::AngleNotInRange(inner) => write!(f, "{}", inner),
-            Self::Float(inner) => write!(f, "{}", inner),
-            Self::Int(inner) => write!(f, "{}", inner),
-            Self::DmsNotation => write!(f, "not a Degree-Minute-Second notation"),
-        }
-    }
-}
-
-impl Error for ParseAngleError {}
 
 impl FromStr for DegreeAngle {
     type Err = ParseAngleError;
