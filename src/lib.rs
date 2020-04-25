@@ -41,7 +41,7 @@
 #![allow(clippy::cast_possible_truncation)]
 #![allow(clippy::cast_sign_loss)]
 
-pub use angle::{dd::DegreeAngle, Angle};
+pub use angle::{dd::DecimalDegree, dms_dd::AccurateDegree, Angle};
 pub use coord::{Latitude, Longitude, Point};
 
 mod angle;
