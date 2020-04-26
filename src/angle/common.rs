@@ -7,7 +7,10 @@ pub(super) trait UnitsAngle: Angle {
 
     fn with_units(u: Self::Units) -> Result<Self, Self::NumErr>;
     fn units(self) -> Self::Units;
-    fn max_units() -> Self::Units;
+
+    fn max_units() -> Self::Units {
+        Self::complete().units()
+    }
 }
 
 #[macro_export]

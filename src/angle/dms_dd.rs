@@ -27,6 +27,7 @@ use crate::{
 };
 
 use super::{
+    common::UnitsAngle,
     consts::{
         ARC_MINUTE_SIGN, ARC_SECOND_SIGN, DEGREE_SIGN, FULL_TURN_DEG, HALF_TURN_DEG, MAX_DEGREE,
         MINUTES_IN_DEGREE, QUARTER_TURN_DEG, SECONDS_IN_MINUTE,
@@ -44,6 +45,27 @@ pub struct AccurateDegree {
 }
 
 impl_angle_ops!(AccurateDegree);
+
+impl UnitsAngle for AccurateDegree {
+    type Units = u32;
+
+    fn with_units(units: u32) -> Result<Self, AngleNotInRange> {
+        if units > Self::max_units() {
+            return Err(AngleNotInRange::Degrees);
+        }
+
+        Ok(Self { units })
+    }
+
+    fn units(self) -> Self::Units {
+        self.units
+    }
+
+    fn max_units() -> u32 {
+        // TODO: recursive stack overflow for the default impl
+        Self::units_in_deg() * (u32::from(MAX_DEGREE))
+    }
+}
 
 impl AngleNames for AccurateDegree {
     fn zero() -> Self {
@@ -96,10 +118,6 @@ impl AccurateDegree {
         //  2) `x = 6, y = 2, N = 9 * 10^6`. Allow to get precise values for 10^-2 arc seconds OR 10^-6 degrees.
         //  Precision for the decimal and sexagesimal representation, differs in 3.6 times.
         9_000_000
-    }
-
-    const fn max_units() -> u32 {
-        Self::units_in_deg() * (MAX_DEGREE as u32)
     }
 
     // the number of degree's decimal digits
@@ -224,14 +242,6 @@ impl AccurateDegree {
         Ok(())
     }
 
-    fn with_units(units: u32) -> Result<Self, AngleNotInRange> {
-        if units > Self::max_units() {
-            return Err(AngleNotInRange::Degrees);
-        }
-
-        Ok(Self { units })
-    }
-
     /// The whole number of degrees in the angle
     pub const fn degrees(self) -> u16 {
         let degrees = self.units / Self::units_in_deg();
@@ -306,10 +316,6 @@ impl AccurateDegree {
     /// but the `deg_min_sec_mas()` returns (36, 0, 0, 0) due to rounding rules
     pub fn deg_min_sec_cas(self) -> (u16, u8, u8, u8) {
         self.dms_parts(false)
-    }
-
-    const fn units(self) -> u32 {
-        self.units
     }
 
     /// Since the DMS and decimal representation have different granularity,

@@ -86,10 +86,6 @@ impl UnitsAngle for DecimalDegree {
     fn units(self) -> Self::Units {
         self.units
     }
-
-    fn max_units() -> Self::Units {
-        Self::complete().units()
-    }
 }
 
 impl Angle for DecimalDegree {
