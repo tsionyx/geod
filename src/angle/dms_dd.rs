@@ -35,9 +35,6 @@ use super::{
     Angle, AngleNames,
 };
 
-const SECONDS_FD: usize = 2;
-const HUNDRED: u32 = pow_10(SECONDS_FD);
-
 /// The structure can accurately store _either_ decimal fractions of the degree (with the 10^-6 degrees precision)
 /// _or_ degree, minute, second (with the 10^-2 arcsecond precision).
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Default, Copy, Clone)]
@@ -105,8 +102,12 @@ impl AccurateDegree {
         Self::units_in_deg() * (MAX_DEGREE as u32)
     }
 
-    // the number of decimal digits
+    // the number of degree's decimal digits
     const PRECISION: u8 = 6;
+
+    // the number of arcseconds's decimal digits
+    const SECONDS_FD: usize = 2;
+    const HUNDRED: u32 = pow_10(Self::SECONDS_FD);
 
     // TODO: make this `const` when the `pow` becomes stable
     fn micro_deg_in_deg() -> u32 {
@@ -121,11 +122,10 @@ impl AccurateDegree {
     }
 
     fn cas_in_deg() -> u32 {
-        let centi = HUNDRED;
         let sec_in_min = u32::from(SECONDS_IN_MINUTE);
         let min_in_deg = u32::from(MINUTES_IN_DEGREE);
         let sec_in_deg = sec_in_min * min_in_deg;
-        centi * sec_in_deg
+        Self::HUNDRED * sec_in_deg
     }
 
     fn cas_to_unit_coef() -> u32 {
@@ -176,7 +176,7 @@ impl AccurateDegree {
         Self::check_dms(degree, minutes, seconds, centi_seconds)?;
 
         // prevent further multiplication overflow by extending precision
-        let centi = u64::from(HUNDRED);
+        let centi = u64::from(Self::HUNDRED);
         let sec_in_min = u64::from(SECONDS_IN_MINUTE);
         let min_in_deg = u64::from(MINUTES_IN_DEGREE);
 
@@ -205,7 +205,7 @@ impl AccurateDegree {
             (
                 0..MINUTES_IN_DEGREE,
                 0..SECONDS_IN_MINUTE,
-                0..(HUNDRED as u8),
+                0..(Self::HUNDRED as u8),
             )
         };
 
@@ -266,12 +266,11 @@ impl AccurateDegree {
 
     /// If `keep_degrees` is false, overflow in minutes will be added to degrees
     fn dms_parts(self, keep_degrees: bool) -> (u16, u8, u8, u8) {
-        let centi = HUNDRED;
         let sec_in_min = u32::from(SECONDS_IN_MINUTE);
         let min_in_deg = u32::from(MINUTES_IN_DEGREE);
 
         let total_cas = self.units.div_round(Self::cas_to_unit_coef());
-        let (total_seconds, cas) = div_mod(total_cas, centi);
+        let (total_seconds, cas) = div_mod(total_cas, Self::HUNDRED);
         let (total_minutes, sec) = div_mod(total_seconds, sec_in_min);
         let (deg, minutes) = div_mod(total_minutes, min_in_deg);
 
@@ -383,7 +382,7 @@ lazy_static! {
             )?                                              # seconds are optional
         )?                                              # minutes and seconds are optional
         $                                           # match the whole line till the end
-        "#, precision=SECONDS_FD)).expect("This regex is valid");
+        "#, precision=AccurateDegree::SECONDS_FD)).expect("This regex is valid");
 
     static ref RE_ASCII: Regex = Regex::new(&format!(r#"(?x) # enables verbose mode
         ^                                           # match the whole line from the start
@@ -401,7 +400,7 @@ lazy_static! {
             )?                                              # seconds are optional
         )?                                              # minutes and seconds are optional
         $                                           # match the whole line till the end
-        "#, precision=SECONDS_FD)).expect("This regex is valid");
+        "#, precision=AccurateDegree::SECONDS_FD)).expect("This regex is valid");
 }
 
 impl AccurateDegree {
@@ -417,7 +416,7 @@ impl AccurateDegree {
         let min = capture.name("min").map_or("0", |m| m.as_str()).parse()?;
         let sec = capture.name("sec").map_or("0", |m| m.as_str()).parse()?;
         let cas = if let Some(capture) = capture.name("cas") {
-            let cas = format!("{:0<width$}", capture.as_str(), width = SECONDS_FD);
+            let cas = format!("{:0<width$}", capture.as_str(), width = Self::SECONDS_FD);
             cas.parse()?
         } else {
             0
@@ -442,7 +441,7 @@ impl fmt::Display for AccurateDegree {
                 if cas == 0 {
                     write!(f, "{}{}", arc_sec, ARC_SECOND_SIGN)
                 } else {
-                    let arc_sec = f64::from(arc_sec) + f64::from(cas) / f64::from(HUNDRED);
+                    let arc_sec = f64::from(arc_sec) + f64::from(cas) / f64::from(Self::HUNDRED);
                     write!(f, "{}{}", arc_sec, ARC_SECOND_SIGN)
                 }
             } else {

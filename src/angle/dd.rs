@@ -37,9 +37,6 @@ use super::{
     Angle, AngleNames,
 };
 
-const SECONDS_FD: usize = 3;
-const THOUSAND: u32 = pow_10(SECONDS_FD);
-
 /// High-precision (10^-7 degrees) and compact (32 bits) angular type.
 ///
 /// The length of the Earth's equator arc second is roughly 30m,
@@ -109,8 +106,12 @@ impl Angle for DecimalDegree {
 }
 
 impl DecimalDegree {
-    // the number of decimal digits
+    // the number of degree's decimal digits
     const PRECISION: u8 = 7;
+
+    // the number of arcseconds's decimal digits
+    const SECONDS_FD: usize = 3;
+    const THOUSAND: u32 = pow_10(Self::SECONDS_FD);
 
     // TODO: make the two following `const` when the `pow` becomes stable
 
@@ -119,11 +120,10 @@ impl DecimalDegree {
     }
 
     fn mas_in_deg() -> u32 {
-        let milli = THOUSAND;
         let sec_in_min = u32::from(SECONDS_IN_MINUTE);
         let min_in_deg = u32::from(MINUTES_IN_DEGREE);
         let sec_in_deg = sec_in_min * min_in_deg;
-        milli * sec_in_deg
+        Self::THOUSAND * sec_in_deg
     }
 
     fn with_deg_and_micro(degrees: u16, micro_degrees: u32) -> Result<Self, AngleNotInRange> {
@@ -164,11 +164,10 @@ impl DecimalDegree {
         Self::check_dms(degree, minutes, seconds, milli_seconds)?;
 
         // prevent further multiplication overflow by extending precision
-        let milli = THOUSAND;
         let sec_in_min = u32::from(SECONDS_IN_MINUTE);
 
         // max is (3600 * 1000)
-        let total_mas = ((u32::from(minutes) * sec_in_min) + u32::from(seconds)) * milli
+        let total_mas = ((u32::from(minutes) * sec_in_min) + u32::from(seconds)) * Self::THOUSAND
             + u32::from(milli_seconds);
 
         // workaround for bad conversion of 3.6 milli-seconds into 10 micro-degrees
@@ -199,7 +198,7 @@ impl DecimalDegree {
             (
                 0..MINUTES_IN_DEGREE,
                 0..SECONDS_IN_MINUTE,
-                0..(THOUSAND as u16),
+                0..(Self::THOUSAND as u16),
             )
         };
 
@@ -255,7 +254,7 @@ impl DecimalDegree {
         let fraction_units = u64::from(self.fract());
         let units_in_deg = u64::from(Self::units_in_deg());
 
-        let milli = u64::from(THOUSAND);
+        let milli = u64::from(Self::THOUSAND);
         let sec_in_min = u64::from(SECONDS_IN_MINUTE);
         let min_in_deg = u64::from(MINUTES_IN_DEGREE);
         let sec_in_deg = sec_in_min * min_in_deg;
@@ -367,7 +366,7 @@ lazy_static! {
             )?                                              # seconds are optional
         )?                                              # minutes and seconds are optional
         $                                           # match the whole line till the end
-        "#, precision=SECONDS_FD)).expect("This regex is valid");
+        "#, precision=DecimalDegree::SECONDS_FD)).expect("This regex is valid");
 
     static ref RE_ASCII: Regex = Regex::new(&format!(r#"(?x) # enables verbose mode
         ^                                           # match the whole line from the start
@@ -385,7 +384,7 @@ lazy_static! {
             )?                                              # seconds are optional
         )?                                              # minutes and seconds are optional
         $                                           # match the whole line till the end
-        "#, precision=SECONDS_FD)).expect("This regex is valid");
+        "#, precision=DecimalDegree::SECONDS_FD)).expect("This regex is valid");
 }
 
 impl DecimalDegree {
@@ -401,7 +400,7 @@ impl DecimalDegree {
         let min = capture.name("min").map_or("0", |m| m.as_str()).parse()?;
         let sec = capture.name("sec").map_or("0", |m| m.as_str()).parse()?;
         let mas = if let Some(capture) = capture.name("mas") {
-            let mas = format!("{:0<width$}", capture.as_str(), width = SECONDS_FD);
+            let mas = format!("{:0<width$}", capture.as_str(), width = Self::SECONDS_FD);
             mas.parse()?
         } else {
             0
@@ -427,7 +426,7 @@ impl fmt::Display for DecimalDegree {
                 if mas == 0 {
                     write!(f, "{}{}", arc_sec, ARC_SECOND_SIGN)
                 } else {
-                    let arc_sec = f64::from(arc_sec) + f64::from(mas) / f64::from(THOUSAND);
+                    let arc_sec = f64::from(arc_sec) + f64::from(mas) / f64::from(Self::THOUSAND);
                     write!(f, "{}{}", arc_sec, ARC_SECOND_SIGN)
                 }
             } else {
