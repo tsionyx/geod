@@ -79,3 +79,35 @@ macro_rules! impl_angle_ops {
         }
     };
 }
+
+pub(super) fn parse_angle_re(is_ascii: bool, arc_seconds_fd: usize) -> String {
+    let (deg, min, sec) = if is_ascii {
+        ("\\*?", '\'', '"')
+    } else {
+        ("°", '′', '″')
+    };
+
+    format!(
+        r#"(?x)                                 # enables verbose mode (to allow these comments)
+        ^                                           # match the whole line from the start
+        (?P<deg>[123]?\d{{1,2}})                        # mandatory degree VALUE (0..=399) - requires more validation!
+        {}                                              # degree sign (can be mandatory or optional)
+        (?:\x20?                                        # minutes and seconds group optionally started with the space
+            (?P<min>[0-5]?\d)                               # minutes VALUE (0..=59)
+            {}                                              # arcminute sign
+            (?:\x20?                                        # seconds with the decimal fraction group optionally started with the space
+                (?P<sec>[0-5]?\d)                               # whole seconds VALUE (0..=59)
+                (?:                                             # fractions of arcsecond with the decimal dot
+                    \.(?P<sec_fract>\d{{1,{precision}}})            # fractions of arcsecond VALUE (up to [precision] digits, 0..=99)
+                )?                                              # fractions of arcsecond are optional
+                {}                                              # arcsecond sign
+            )?                                              # seconds are optional
+        )?                                              # minutes and seconds are optional
+        $                                           # match the whole line till the end
+        "#,
+        deg,
+        min,
+        sec,
+        precision = arc_seconds_fd
+    )
+}

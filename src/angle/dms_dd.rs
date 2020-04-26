@@ -27,7 +27,7 @@ use crate::{
 };
 
 use super::{
-    common::UnitsAngle,
+    common::{parse_angle_re, UnitsAngle},
     consts::{
         ARC_MINUTE_SIGN, ARC_SECOND_SIGN, DEGREE_SIGN, FULL_TURN_DEG, HALF_TURN_DEG, MAX_DEGREE,
         MINUTES_IN_DEGREE, QUARTER_TURN_DEG, SECONDS_IN_MINUTE,
@@ -372,41 +372,10 @@ impl FromStr for AccurateDegree {
 }
 
 lazy_static! {
-    static ref RE_UNICODE: Regex = Regex::new(&format!(r#"(?x) # enables verbose mode
-        ^                                           # match the whole line from the start
-        (?P<deg>[123]?\d{{1,2}})                        # mandatory degree VALUE (0..=399) - requires more validation!
-        °                                               # mandatory degree sign
-        (?:\x20?                                        # minutes and seconds group optionally started with the space
-            (?P<min>[0-5]?\d)                               # minutes VALUE (0..=59)
-            ′                                               # arcminute sign
-            (?:\x20?                                        # seconds and centiseconds group optionally started with the space
-                (?P<sec>[0-5]?\d)                               # whole seconds VALUE (0..=59)
-                (?:                                             # centiseconds with the decimal dot
-                    \.(?P<cas>\d{{1,{precision}}})                  # centiseconds VALUE (up to [precision] digits, 0..=99)
-                )?                                              # centiseconds are optional
-                ″                                            # arcsecond sign
-            )?                                              # seconds are optional
-        )?                                              # minutes and seconds are optional
-        $                                           # match the whole line till the end
-        "#, precision=AccurateDegree::SECONDS_FD)).expect("This regex is valid");
-
-    static ref RE_ASCII: Regex = Regex::new(&format!(r#"(?x) # enables verbose mode
-        ^                                           # match the whole line from the start
-        (?P<deg>[123]?\d{{1,2}})                        # mandatory degree VALUE (0..=399) - requires more validation!
-        \*?                                             # optional degree sign (asterisk)
-        (?:\x20?                                        # minutes and seconds group optionally started with the space
-            (?P<min>[0-5]?\d)                               # minutes VALUE (0..=59)
-            '                                               # arcminute sign
-            (?:\x20?                                        # seconds and centiseconds group optionally started with the space
-                (?P<sec>[0-5]?\d)                               # whole seconds VALUE (0..=59)
-                (?:                                             # centiseconds with the decimal dot
-                    \.(?P<cas>\d{{1,{precision}}})                  # centiseconds VALUE (up to [precision] digits, 0..=99)
-                )?                                              # centiseconds are optional
-                "                                               # arcsecond sign
-            )?                                              # seconds are optional
-        )?                                              # minutes and seconds are optional
-        $                                           # match the whole line till the end
-        "#, precision=AccurateDegree::SECONDS_FD)).expect("This regex is valid");
+    static ref RE_UNICODE: Regex = Regex::new(&parse_angle_re(false, AccurateDegree::SECONDS_FD))
+        .expect("Unicode regex is valid");
+    static ref RE_ASCII: Regex = Regex::new(&parse_angle_re(true, AccurateDegree::SECONDS_FD))
+        .expect("ASCII regex is valid");
 }
 
 impl AccurateDegree {
@@ -421,7 +390,7 @@ impl AccurateDegree {
         dbg!(&capture);
         let min = capture.name("min").map_or("0", |m| m.as_str()).parse()?;
         let sec = capture.name("sec").map_or("0", |m| m.as_str()).parse()?;
-        let cas = if let Some(capture) = capture.name("cas") {
+        let cas = if let Some(capture) = capture.name("sec_fract") {
             let cas = format!("{:0<width$}", capture.as_str(), width = Self::SECONDS_FD);
             cas.parse()?
         } else {
