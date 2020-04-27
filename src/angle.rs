@@ -4,9 +4,8 @@ use std::{convert::TryFrom, error::Error, str::FromStr};
 
 use num_traits::{CheckedAdd, CheckedSub};
 
-mod common;
-mod consts;
 pub mod dd;
+mod degree;
 pub mod dms_dd;
 mod errors;
 
@@ -117,4 +116,84 @@ pub trait Angle:
 
     /// Produce an error when the angles more than the straight one are invalid
     fn reflex_detected() -> Self::NumErr;
+}
+
+pub(super) trait UnitsAngle: Angle {
+    type Units: CheckedAdd + CheckedSub;
+
+    fn with_units(u: Self::Units) -> Result<Self, Self::NumErr>;
+    fn units(self) -> Self::Units;
+
+    fn max_units() -> Self::Units {
+        Self::complete().units()
+    }
+}
+
+#[macro_export]
+/// Implement addition and subtraction operations
+/// on the `UnitsAngle` types.
+/// `$sum_t` should be able to hold a sum of any units
+/// without the risk of overflow.
+macro_rules! impl_angle_ops {
+    ($t:ty: <$sum_t: ty) => {
+        impl Add for $t {
+            type Output = Self;
+
+            fn add(self, rhs: Self) -> Self::Output {
+                if let Some(sum) = self.checked_add(&rhs) {
+                    return sum;
+                }
+
+                // the sum can overflow `Units`, so convert everything to $sum_t
+                let self_units = <$sum_t>::from(self.units());
+                let rhs_units = <$sum_t>::from(rhs.units());
+                let max = <$sum_t>::from(Self::max_units());
+                assert!(self_units <= max);
+                assert!(rhs_units <= max);
+                assert!(self_units + rhs_units > max);
+
+                let sum_units = (self_units + rhs_units - max)
+                    .try_into()
+                    .expect("Less than max should be valid");
+                Self::with_units(sum_units)
+                    .expect("Wrapping sum around the max degree is always a valid degree")
+            }
+        }
+
+        impl CheckedAdd for $t {
+            fn checked_add(&self, rhs: &Self) -> Option<Self> {
+                self.units()
+                    .checked_add(rhs.units())
+                    .filter(|&sum_units| sum_units <= Self::max_units())
+                    .and_then(|units| Self::with_units(units).ok())
+            }
+        }
+
+        impl Sub for $t {
+            type Output = Self;
+
+            fn sub(self, rhs: Self) -> Self::Output {
+                if let Some(diff) = self.checked_sub(&rhs) {
+                    return diff;
+                }
+
+                let self_ = self.units();
+                let rhs = rhs.units();
+                assert!(self_ < rhs);
+
+                let max = Self::max_units();
+
+                let diff = max - (rhs - self_);
+                Self::with_units(diff).expect("The diff is less than the max angle")
+            }
+        }
+
+        impl CheckedSub for $t {
+            fn checked_sub(&self, rhs: &Self) -> Option<Self> {
+                self.units()
+                    .checked_sub(rhs.units())
+                    .and_then(|units| Self::with_units(units).ok())
+            }
+        }
+    };
 }
