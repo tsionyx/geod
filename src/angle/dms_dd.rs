@@ -97,9 +97,8 @@ impl AccurateDegree {
     const SECONDS_FD: usize = 2;
     const HUNDRED: u32 = pow_10(Self::SECONDS_FD);
 
-    // TODO: make this `const` when the `pow` becomes stable
-    fn micro_deg_in_deg() -> u32 {
-        10_u32.pow(Self::PRECISION.into())
+    const fn micro_deg_in_deg() -> u32 {
+        pow_10(Self::PRECISION as usize)
     }
 
     fn micro_deg_to_unit_coef() -> u32 {
@@ -109,9 +108,9 @@ impl AccurateDegree {
         quot
     }
 
-    fn cas_in_deg() -> u32 {
-        let sec_in_min = u32::from(SECONDS_IN_MINUTE);
-        let min_in_deg = u32::from(MINUTES_IN_DEGREE);
+    const fn cas_in_deg() -> u32 {
+        let sec_in_min = SECONDS_IN_MINUTE as u32;
+        let min_in_deg = MINUTES_IN_DEGREE as u32;
         let sec_in_deg = sec_in_min * min_in_deg;
         Self::HUNDRED * sec_in_deg
     }

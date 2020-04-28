@@ -79,15 +79,13 @@ impl DecimalDegree {
     const SECONDS_FD: usize = 3;
     const THOUSAND: u32 = pow_10(Self::SECONDS_FD);
 
-    // TODO: make the two following `const` when the `pow` becomes stable
-
-    fn units_in_deg() -> u32 {
-        10_u32.pow(Self::PRECISION.into())
+    const fn units_in_deg() -> u32 {
+        pow_10(Self::PRECISION as usize)
     }
 
-    fn mas_in_deg() -> u32 {
-        let sec_in_min = u32::from(SECONDS_IN_MINUTE);
-        let min_in_deg = u32::from(MINUTES_IN_DEGREE);
+    const fn mas_in_deg() -> u32 {
+        let sec_in_min = SECONDS_IN_MINUTE as u32;
+        let min_in_deg = MINUTES_IN_DEGREE as u32;
         let sec_in_deg = sec_in_min * min_in_deg;
         Self::THOUSAND * sec_in_deg
     }
@@ -184,13 +182,13 @@ impl DecimalDegree {
     }
 
     /// The whole number of degrees in the angle
-    pub fn degrees(self) -> u16 {
+    pub const fn degrees(self) -> u16 {
         let degrees = self.units / Self::units_in_deg();
         degrees as u16
     }
 
     /// The fractional part of the angle represented in the small units (10^-7 degrees)
-    pub fn fract(self) -> u32 {
+    pub const fn fract(self) -> u32 {
         self.units % Self::units_in_deg()
     }
 

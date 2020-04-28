@@ -37,9 +37,8 @@
 #![allow(clippy::non_ascii_literal)]
 #![allow(clippy::must_use_candidate)]
 #![cfg_attr(test, allow(clippy::wildcard_imports))]
-// TODO: disable these casts warnings
+// TODO: remove this cast's warnings
 #![allow(clippy::cast_possible_truncation)]
-#![allow(clippy::cast_sign_loss)]
 
 pub use angle::{dd::DecimalDegree, dms_dd::AccurateDegree, Angle};
 pub use coord::{Latitude, Longitude, Point};
