@@ -50,7 +50,7 @@ macro_rules! impl_angle_traits {
 #[macro_export]
 /// Implement the conversion traits for the type representing degrees
 macro_rules! impl_conv_traits {
-    ($t:ty, $multiplier_f:ident) => {
+    ($t:ty, $fraction_multiplier_func:ident) => {
         impl FromStr for $t {
             type Err = ParseAngleError;
 
@@ -79,7 +79,7 @@ macro_rules! impl_conv_traits {
                 let integer = value.floor() as u64;
                 let integer = integer.try_into().map_err(|_| AngleNotInRange::Degrees)?;
 
-                let precision = Self::$multiplier_f();
+                let precision = Self::$fraction_multiplier_func();
                 let fraction = (value.fract() * f64::from(precision)).round() as u64;
                 let fraction = fraction
                     .try_into()
@@ -91,6 +91,31 @@ macro_rules! impl_conv_traits {
                 } else {
                     Self::with_deg_and_fraction(integer, fraction)
                 }
+            }
+        }
+
+        impl $t {
+            fn parse_dms(s: &str) -> Result<Self, ParseAngleError> {
+                let capture = RE_UNICODE
+                    .captures(s)
+                    .or_else(|| RE_ASCII.captures(s))
+                    .ok_or(ParseAngleError::DmsNotation)?;
+                let deg = capture.name("deg").ok_or(ParseAngleError::DmsNotation)?;
+                let deg = deg.as_str().parse()?;
+
+                dbg!(&capture);
+                let min = capture.name("min").map_or("0", |m| m.as_str()).parse()?;
+                let sec = capture.name("sec").map_or("0", |m| m.as_str()).parse()?;
+                let sec_fraction = if let Some(capture) = capture.name("sec_fract") {
+                    let sec_fraction =
+                        format!("{:0<width$}", capture.as_str(), width = Self::SECONDS_FD);
+                    sec_fraction.parse()?
+                } else {
+                    0
+                };
+
+                let good = Self::with_dms(deg, min, sec, sec_fraction)?;
+                Ok(good)
             }
         }
     };

@@ -305,29 +305,6 @@ lazy_static! {
         Regex::new(&parse_dms_re(true, AccurateDegree::SECONDS_FD)).expect("ASCII regex is valid");
 }
 
-impl AccurateDegree {
-    fn parse_dms(s: &str) -> Result<Self, ParseAngleError> {
-        let capture = RE_UNICODE
-            .captures(s)
-            .or_else(|| RE_ASCII.captures(s))
-            .ok_or(ParseAngleError::DmsNotation)?;
-        let deg = capture.name("deg").ok_or(ParseAngleError::DmsNotation)?;
-        let deg = deg.as_str().parse()?;
-
-        dbg!(&capture);
-        let min = capture.name("min").map_or("0", |m| m.as_str()).parse()?;
-        let sec = capture.name("sec").map_or("0", |m| m.as_str()).parse()?;
-        let cas = if let Some(capture) = capture.name("sec_fract") {
-            let cas = format!("{:0<width$}", capture.as_str(), width = Self::SECONDS_FD);
-            cas.parse()?
-        } else {
-            0
-        };
-        let good = Self::with_dms(deg, min, sec, cas)?;
-        Ok(good)
-    }
-}
-
 impl fmt::Display for AccurateDegree {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // DMS
