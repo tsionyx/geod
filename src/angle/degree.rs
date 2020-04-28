@@ -50,7 +50,7 @@ macro_rules! impl_angle_traits {
 #[macro_export]
 /// Implement the conversion traits for the type representing degrees
 macro_rules! impl_conv_traits {
-    ($t:ty, $fraction_multiplier_func:ident) => {
+    ($t:ty, $fraction_multiplier_func:ident, $dms_parts_func:ident, $arc_sec_precision:ident) => {
         impl FromStr for $t {
             type Err = ParseAngleError;
 
@@ -116,6 +116,46 @@ macro_rules! impl_conv_traits {
 
                 let good = Self::with_dms(deg, min, sec, sec_fraction)?;
                 Ok(good)
+            }
+        }
+
+        impl fmt::Display for $t {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                // DMS
+                if f.alternate() {
+                    let (deg, arc_min, arc_sec, sec_fraction) = self.$dms_parts_func();
+                    write!(f, "{}{}", deg, DEGREE_SIGN)?;
+
+                    if (arc_min != 0) || (arc_sec != 0) || (sec_fraction != 0) {
+                        write!(f, "{}{}", arc_min, ARC_MINUTE_SIGN)?;
+                    }
+
+                    if (arc_sec != 0) || (sec_fraction != 0) {
+                        if sec_fraction == 0 {
+                            write!(f, "{}{}", arc_sec, ARC_SECOND_SIGN)
+                        } else {
+                            let arc_sec = f64::from(arc_sec)
+                                + f64::from(sec_fraction) / f64::from(Self::$arc_sec_precision);
+                            write!(f, "{}{}", arc_sec, ARC_SECOND_SIGN)
+                        }
+                    } else {
+                        Ok(())
+                    }
+                } else {
+                    let (deg, m_deg) = (self.degrees(), self.deg_fract());
+                    if m_deg == 0 {
+                        write!(f, "{}{}", deg, DEGREE_SIGN)
+                    } else {
+                        write!(
+                            f,
+                            "{}.{:0>width$}{}",
+                            deg,
+                            m_deg,
+                            DEGREE_SIGN,
+                            width = Self::PRECISION.into()
+                        )
+                    }
+                }
             }
         }
     };

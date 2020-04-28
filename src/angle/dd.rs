@@ -69,7 +69,7 @@ impl UnitsAngle for DecimalDegree {
 
 impl_angle_traits!(DecimalDegree);
 impl_angle_ops!(DecimalDegree: <u64);
-impl_conv_traits!(DecimalDegree, units_in_deg);
+impl_conv_traits!(DecimalDegree, units_in_deg, deg_min_sec_mas, THOUSAND);
 
 impl DecimalDegree {
     // the number of degree's decimal digits
@@ -188,7 +188,7 @@ impl DecimalDegree {
     }
 
     /// The fractional part of the angle represented in the small units (10^-7 degrees)
-    pub const fn fract(self) -> u32 {
+    pub const fn deg_fract(self) -> u32 {
         self.units % Self::units_in_deg()
     }
 
@@ -215,7 +215,7 @@ impl DecimalDegree {
     /// If `keep_degrees` is false, overflow in minutes will be added to degrees
     fn dms_parts(self, keep_degrees: bool) -> (u16, u8, u8, u16) {
         // prevent further multiplication overflow by extending precision
-        let fraction_units = u64::from(self.fract());
+        let fraction_units = u64::from(self.deg_fract());
         let units_in_deg = u64::from(Self::units_in_deg());
 
         let milli = u64::from(Self::THOUSAND);
@@ -277,45 +277,6 @@ lazy_static! {
         Regex::new(&parse_dms_re(true, DecimalDegree::SECONDS_FD)).expect("ASCII regex is valid");
 }
 
-impl fmt::Display for DecimalDegree {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // DMS
-        if f.alternate() {
-            let (deg, arc_min, arc_sec, mas) = self.deg_min_sec_mas();
-            write!(f, "{}{}", deg, DEGREE_SIGN)?;
-
-            if (arc_min != 0) || (arc_sec != 0) || (mas != 0) {
-                write!(f, "{}{}", arc_min, ARC_MINUTE_SIGN)?;
-            }
-
-            if (arc_sec != 0) || (mas != 0) {
-                if mas == 0 {
-                    write!(f, "{}{}", arc_sec, ARC_SECOND_SIGN)
-                } else {
-                    let arc_sec = f64::from(arc_sec) + f64::from(mas) / f64::from(Self::THOUSAND);
-                    write!(f, "{}{}", arc_sec, ARC_SECOND_SIGN)
-                }
-            } else {
-                Ok(())
-            }
-        } else {
-            let (deg, fract) = (self.degrees(), self.fract());
-            if fract == 0 {
-                write!(f, "{}{}", deg, DEGREE_SIGN)
-            } else {
-                write!(
-                    f,
-                    "{}.{:0>width$}{}",
-                    deg,
-                    fract,
-                    DEGREE_SIGN,
-                    width = Self::PRECISION.into()
-                )
-            }
-        }
-    }
-}
-
 impl TryFrom<(u16, u8, u8, u16)> for DecimalDegree {
     type Error = AngleNotInRange;
 
@@ -355,7 +316,7 @@ mod tests {
         assert!(zero_angle.is_zero());
 
         assert_eq!(zero_angle.degrees(), 0);
-        assert_eq!(zero_angle.fract(), 0);
+        assert_eq!(zero_angle.deg_fract(), 0);
         assert_eq!(zero_angle.units(), 0);
 
         assert_eq!(zero_angle.arc_minutes(), 0);
@@ -368,7 +329,7 @@ mod tests {
         let north_pole: DecimalDegree = 180.try_into().unwrap();
         assert!(north_pole.is_straight());
         assert_eq!(north_pole.degrees(), 180);
-        assert_eq!(north_pole.fract(), 0);
+        assert_eq!(north_pole.deg_fract(), 0);
         assert_eq!(north_pole.units(), 1_800_000_000);
 
         assert_eq!(north_pole.arc_minutes(), 0);
@@ -385,7 +346,7 @@ mod tests {
         let polar_circle = DecimalDegree::with_deg_and_fraction(66, 5_633_334).unwrap();
         assert!(polar_circle.is_acute());
         assert_eq!(polar_circle.degrees(), 66);
-        assert_eq!(polar_circle.fract(), 5_633_334);
+        assert_eq!(polar_circle.deg_fract(), 5_633_334);
         assert_eq!(polar_circle.units(), 665_633_334);
 
         assert_eq!(polar_circle.arc_minutes(), 33);
@@ -398,7 +359,7 @@ mod tests {
         let angle = DecimalDegree::with_deg_and_fraction(200, 0).unwrap();
         assert!(angle.is_reflex());
         assert_eq!(angle.degrees(), 200);
-        assert_eq!(angle.fract(), 0);
+        assert_eq!(angle.deg_fract(), 0);
 
         assert_eq!(angle.arc_minutes(), 0);
         assert_eq!(angle.arc_seconds(), 0);
@@ -457,7 +418,7 @@ mod tests {
         let angle = DecimalDegree::with_deg_and_fraction(360, 0).unwrap();
         assert!(angle.is_complete());
         assert_eq!(angle.degrees(), 360);
-        assert_eq!(angle.fract(), 0);
+        assert_eq!(angle.deg_fract(), 0);
 
         assert_eq!(angle.arc_minutes(), 0);
         assert_eq!(angle.arc_seconds(), 0);
@@ -619,7 +580,7 @@ mod tests {
     fn good_fraction_minus_one_is_overflow() {
         let angle = DecimalDegree::with_deg_and_fraction(30, 9_999_999).unwrap();
         assert_eq!(angle.degrees(), 30);
-        assert_eq!(angle.fract(), 9_999_999);
+        assert_eq!(angle.deg_fract(), 9_999_999);
         assert_eq!(angle.units(), 309_999_999);
 
         assert_eq!(angle.degrees(), 30);
@@ -642,7 +603,7 @@ mod tests {
     fn good_fraction_minus_two() {
         let angle = DecimalDegree::with_deg_and_fraction(30, 9_999_998).unwrap();
         assert_eq!(angle.degrees(), 30);
-        assert_eq!(angle.fract(), 9_999_998);
+        assert_eq!(angle.deg_fract(), 9_999_998);
         assert_eq!(angle.units(), 309_999_998);
 
         assert_eq!(angle.degrees(), 30);
@@ -668,7 +629,7 @@ mod tests {
         for f in 0..1000 {
             let angle = DecimalDegree::with_deg_and_fraction(0, f).unwrap();
             assert_eq!(angle.degrees(), 0);
-            assert_eq!(angle.fract(), f);
+            assert_eq!(angle.deg_fract(), f);
             assert_eq!(angle.units(), f);
         }
     }
@@ -680,7 +641,7 @@ mod tests {
         for f in 0..10_000_000 {
             let angle = DecimalDegree::with_deg_and_fraction(0, f).unwrap();
             assert_eq!(angle.degrees(), 0);
-            assert_eq!(angle.fract(), f);
+            assert_eq!(angle.deg_fract(), f);
             if let Some(prev) = prev {
                 assert!(angle > prev);
                 assert_eq!(
@@ -735,7 +696,7 @@ mod tests {
         let angle = DecimalDegree::with_dms(156, 59, 59, 999).unwrap();
 
         assert_eq!(angle.degrees(), 156);
-        assert_eq!(angle.fract(), 9_999_997);
+        assert_eq!(angle.deg_fract(), 9_999_997);
     }
 
     #[test]
@@ -991,7 +952,7 @@ mod parse_tests {
         let s = "54";
         let angle: DecimalDegree = s.parse().unwrap();
         assert_eq!(angle.degrees(), 54);
-        assert_eq!(angle.fract(), 0);
+        assert_eq!(angle.deg_fract(), 0);
 
         assert_eq!(angle, DecimalDegree::with_dms(54, 0, 0, 0).unwrap());
     }
@@ -1001,7 +962,7 @@ mod parse_tests {
         let s = "54°";
         let angle: DecimalDegree = s.parse().unwrap();
         assert_eq!(angle.degrees(), 54);
-        assert_eq!(angle.fract(), 0);
+        assert_eq!(angle.deg_fract(), 0);
 
         assert_eq!(angle, DecimalDegree::with_dms(54, 0, 0, 0).unwrap());
     }
@@ -1010,35 +971,35 @@ mod parse_tests {
     fn simple_decimal() {
         let angle: DecimalDegree = "54.145".parse().unwrap();
         assert_eq!(angle.degrees(), 54);
-        assert_eq!(angle.fract(), 1_450_000);
+        assert_eq!(angle.deg_fract(), 1_450_000);
     }
 
     #[test]
     fn simple_decimal_with_degree_sign() {
         let angle: DecimalDegree = "54.145°".parse().unwrap();
         assert_eq!(angle.degrees(), 54);
-        assert_eq!(angle.fract(), 1_450_000);
+        assert_eq!(angle.deg_fract(), 1_450_000);
     }
 
     #[test]
     fn too_precise_truncation() {
         let angle: DecimalDegree = "54.123456789".parse().unwrap();
         assert_eq!(angle.degrees(), 54);
-        assert_eq!(angle.fract(), 1_234_568);
+        assert_eq!(angle.deg_fract(), 1_234_568);
     }
 
     #[test]
     fn round_down_more_than_7_digits() {
         let angle: DecimalDegree = "18.99999995°".parse().unwrap();
         assert_eq!(angle.degrees(), 18);
-        assert_eq!(angle.fract(), 9_999_999);
+        assert_eq!(angle.deg_fract(), 9_999_999);
     }
 
     #[test]
     fn round_up_more_than_7_digits() {
         let angle: DecimalDegree = "18.99999996°".parse().unwrap();
         assert_eq!(angle.degrees(), 19);
-        assert_eq!(angle.fract(), 0);
+        assert_eq!(angle.deg_fract(), 0);
     }
 
     #[test]
@@ -1057,7 +1018,7 @@ mod parse_tests {
     fn big_but_valid() {
         let angle: DecimalDegree = "278.123456".parse().unwrap();
         assert_eq!(angle.degrees(), 278);
-        assert_eq!(angle.fract(), 1_234_560);
+        assert_eq!(angle.deg_fract(), 1_234_560);
     }
 
     #[test]
