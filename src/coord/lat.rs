@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{angle::Angle, try_from_tuples_and_arrays, utils::ToUnsigned};
 
-use super::{AngleAndDirection, FromSign, ParseCoordinateError, ParsedCoordinate};
+use super::{AngleAndDirection, ParseCoordinateError, ParsedCoordinate};
 
 use self::Pole::{North, South};
 
@@ -56,18 +56,6 @@ impl fmt::Display for ParsePoleError {
 
 impl Error for ParsePoleError {}
 
-impl FromStr for Pole {
-    type Err = ParsePoleError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "N" => Ok(North),
-            "S" => Ok(South),
-            _ => Err(ParsePoleError { failed: s.into() }),
-        }
-    }
-}
-
 impl TryFrom<char> for Pole {
     type Error = ParsePoleError;
 
@@ -78,16 +66,6 @@ impl TryFrom<char> for Pole {
             _ => Err(ParsePoleError {
                 failed: c.to_string(),
             }),
-        }
-    }
-}
-
-impl FromSign for Pole {
-    fn from_sign(sign: char) -> Option<Self> {
-        match sign {
-            '+' => Some(North),
-            '-' => Some(South),
-            _ => None,
         }
     }
 }

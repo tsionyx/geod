@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{angle::Angle, try_from_tuples_and_arrays, utils::ToUnsigned};
 
-use super::{AngleAndDirection, FromSign, ParseCoordinateError, ParsedCoordinate};
+use super::{AngleAndDirection, ParseCoordinateError, ParsedCoordinate};
 
 use self::RotationalDirection::{East, West};
 
@@ -56,18 +56,6 @@ impl fmt::Display for ParseDirectionError {
 
 impl Error for ParseDirectionError {}
 
-impl FromStr for RotationalDirection {
-    type Err = ParseDirectionError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "E" => Ok(East),
-            "W" => Ok(West),
-            _ => Err(ParseDirectionError { failed: s.into() }),
-        }
-    }
-}
-
 impl TryFrom<char> for RotationalDirection {
     type Error = ParseDirectionError;
 
@@ -78,16 +66,6 @@ impl TryFrom<char> for RotationalDirection {
             _ => Err(ParseDirectionError {
                 failed: c.to_string(),
             }),
-        }
-    }
-}
-
-impl FromSign for RotationalDirection {
-    fn from_sign(sign: char) -> Option<Self> {
-        match sign {
-            '+' => Some(East),
-            '-' => Some(West),
-            _ => None,
         }
     }
 }

@@ -46,6 +46,16 @@ trait FromSign: Sized {
     fn from_sign(sign: char) -> Option<Self>;
 }
 
+impl<T: From<bool>> FromSign for T {
+    fn from_sign(sign: char) -> Option<Self> {
+        match sign {
+            '+' => Some(Self::from(true)),
+            '-' => Some(Self::from(false)),
+            _ => None,
+        }
+    }
+}
+
 trait AngleAndDirection<A: Angle>: Sized {
     type Direction;
 
