@@ -10,75 +10,11 @@ use std::{
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use crate::{angle::Angle, try_from_tuples_and_arrays, utils::ToUnsigned};
+use crate::{angle::Angle, bool_enum, try_from_tuples_and_arrays, utils::ToUnsigned};
 
 use super::{AngleAndDirection, ParseCoordinateError, ParsedCoordinate};
 
-use self::RotationalDirection::{East, West};
-
-#[derive(Debug, PartialEq, Copy, Clone)]
-pub enum RotationalDirection {
-    East,
-    West,
-}
-
-impl Neg for RotationalDirection {
-    type Output = Self;
-
-    fn neg(self) -> Self::Output {
-        match self {
-            East => West,
-            West => East,
-        }
-    }
-}
-
-impl From<bool> for RotationalDirection {
-    fn from(is_east: bool) -> Self {
-        if is_east {
-            East
-        } else {
-            West
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct ParseDirectionError {
-    failed: String,
-}
-
-impl fmt::Display for ParseDirectionError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Cannot parse RotationalDirection from {:?}", self.failed)
-    }
-}
-
-impl Error for ParseDirectionError {}
-
-impl TryFrom<char> for RotationalDirection {
-    type Error = ParseDirectionError;
-
-    fn try_from(c: char) -> Result<Self, Self::Error> {
-        match c {
-            'E' => Ok(East),
-            'W' => Ok(West),
-            _ => Err(ParseDirectionError {
-                failed: c.to_string(),
-            }),
-        }
-    }
-}
-
-impl fmt::Display for RotationalDirection {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let ch = match self {
-            Self::East => 'E',
-            Self::West => 'W',
-        };
-        write!(f, "{}", ch)
-    }
-}
+bool_enum!(RotationalDirection: East and West; parse from 'E':'W' with ParseDirectionError);
 
 /// The angle measured on the equatorial plane between the meridian of the point
 /// and the prime meridian (Greenwich, UK)

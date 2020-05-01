@@ -10,75 +10,11 @@ use std::{
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use crate::{angle::Angle, try_from_tuples_and_arrays, utils::ToUnsigned};
+use crate::{angle::Angle, bool_enum, try_from_tuples_and_arrays, utils::ToUnsigned};
 
 use super::{AngleAndDirection, ParseCoordinateError, ParsedCoordinate};
 
-use self::Pole::{North, South};
-
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub enum Pole {
-    North,
-    South,
-}
-
-impl Neg for Pole {
-    type Output = Self;
-
-    fn neg(self) -> Self::Output {
-        match self {
-            South => North,
-            North => South,
-        }
-    }
-}
-
-impl From<bool> for Pole {
-    fn from(above_equator: bool) -> Self {
-        if above_equator {
-            North
-        } else {
-            South
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct ParsePoleError {
-    failed: String,
-}
-
-impl fmt::Display for ParsePoleError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Cannot parse Pole from {:?}", self.failed)
-    }
-}
-
-impl Error for ParsePoleError {}
-
-impl TryFrom<char> for Pole {
-    type Error = ParsePoleError;
-
-    fn try_from(c: char) -> Result<Self, Self::Error> {
-        match c {
-            'N' => Ok(North),
-            'S' => Ok(South),
-            _ => Err(ParsePoleError {
-                failed: c.to_string(),
-            }),
-        }
-    }
-}
-
-impl fmt::Display for Pole {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let pole_symbol = match self {
-            North => 'N',
-            South => 'S',
-        };
-        write!(f, "{}", pole_symbol)
-    }
-}
+bool_enum!(Pole: North and South; parse from 'N':'S' with ParsePoleError);
 
 /// The angle measured between the equatorial plane and the point along the meridian
 /// <https://en.wikipedia.org/wiki/Latitude>

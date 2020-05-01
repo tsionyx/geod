@@ -3,10 +3,7 @@ use std::{convert::TryFrom, error::Error, fmt, str::FromStr};
 use crate::{angle::Angle, utils::StripChar};
 
 pub use self::{
-    lat::{
-        Latitude,
-        Pole::{self},
-    },
+    lat::{Latitude, Pole},
     lon::Longitude,
     point::Point,
 };
@@ -121,6 +118,83 @@ where
 
         Err(ParseCoordinateError::NoHemisphere)
     }
+}
+
+#[macro_export]
+/// Implements simple two variants enum associated with the boolean type
+macro_rules! bool_enum {
+    ($name:ident: $truthy:ident and $falsy:ident; parse from $true_ch:literal:$false_ch:literal with $parse_err:ident) => {
+        use self::$name::{$falsy, $truthy};
+
+        #[derive(Debug, Copy, Clone, PartialEq)]
+        pub enum $name {
+            $truthy,
+            $falsy,
+        }
+
+        impl Neg for $name {
+            type Output = Self;
+
+            fn neg(self) -> Self::Output {
+                match self {
+                    $falsy => $truthy,
+                    $truthy => $falsy,
+                }
+            }
+        }
+
+        impl From<bool> for $name {
+            fn from(val: bool) -> Self {
+                if val {
+                    $truthy
+                } else {
+                    $falsy
+                }
+            }
+        }
+
+        #[derive(Debug)]
+        pub struct $parse_err {
+            failed: String,
+        }
+
+        impl fmt::Display for $parse_err {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                write!(
+                    f,
+                    "Cannot parse {} from {:?}",
+                    stringify!($name),
+                    self.failed
+                )
+            }
+        }
+
+        impl Error for $parse_err {}
+
+        impl TryFrom<char> for $name {
+            type Error = $parse_err;
+
+            fn try_from(c: char) -> Result<Self, Self::Error> {
+                match c {
+                    $true_ch => Ok($truthy),
+                    $false_ch => Ok($falsy),
+                    _ => Err($parse_err {
+                        failed: c.to_string(),
+                    }),
+                }
+            }
+        }
+
+        impl fmt::Display for $name {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                let symbol = match self {
+                    $truthy => $true_ch,
+                    $falsy => $false_ch,
+                };
+                write!(f, "{}", symbol)
+            }
+        }
+    };
 }
 
 #[macro_export]
