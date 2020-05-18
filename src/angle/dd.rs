@@ -1,5 +1,5 @@
 //! The angle implementation can be used to store and operate (addition, subtraction)
-//! on degrees with their decimal fractions with the hebdo (10^-7) precision.
+//! on degrees with their decimal fractions with the hebdo (10<sup>-7</sup>) precision.
 //! <https://en.wikipedia.org/wiki/Decimal_degrees>
 //!
 //! It also can be used to operate in terms of or DMS (degrees, minutes, seconds)
@@ -36,12 +36,12 @@ use super::{
     Angle, AngleNames, UnitsAngle,
 };
 
-/// High-precision (10^-7 degrees) and compact (32 bits) angular type.
+/// High-precision (10<sup>-7</sup> degrees) and compact (32 bits) angular type.
 ///
 /// The length of the Earth's equator arc second is roughly 30m,
 /// so we need smaller units to represent smaller things.
 ///
-/// The current precision (10^-7 degrees) can represent things about 11 mm on the equator.
+/// The current precision (10<sup>-7</sup> degrees) can represent things about 11 mm on the equator.
 /// <https://en.wikipedia.org/wiki/Decimal_degrees#Precision>
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Default, Copy, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -113,8 +113,9 @@ impl DecimalDegree {
         Ok(Self { units })
     }
 
-    /// Degree, minute, second, millisecond
-    /// <https://en.wikipedia.org/wiki/Minute_and_second_of_arc>
+    /// Degree, minute, second, centisecond.
+    ///
+    /// [Read more](https://en.wikipedia.org/wiki/Minute_and_second_of_arc)
     ///
     /// # Errors
     /// When some part of the angle is out of scope
@@ -187,7 +188,7 @@ impl DecimalDegree {
         degrees as u16
     }
 
-    /// The fractional part of the angle represented in the small units (10^-7 degrees)
+    /// The fractional part of the angle represented in the small units (10<sup>-7</sup> degrees)
     pub const fn deg_fract(self) -> u32 {
         self.units % Self::units_in_deg()
     }
@@ -202,12 +203,12 @@ impl DecimalDegree {
         self.dms_parts(true).2
     }
 
-    /// Get the milli arc seconds (1/1000-th of the arc second) component of the angle.
+    /// The milli arc seconds (1/1000-th of the arc second) component of the angle.
     ///
     /// Use with caution! The overflow of `0.999_999_9` degrees
-    /// handled incorrectly to keep the `self.degrees()` value valid.
-    /// To get the precise values in such a boundary condition,
-    /// use the `self.deg_min_sec_mas()` instead.
+    /// intentionally handled incorrectly to keep the [`degrees`](#method.degrees) value valid.
+    /// To get the accurate value in such a boundary condition,
+    /// use [`deg_min_sec_mas`](#method.deg_min_sec_mas) instead.
     pub fn milli_arc_seconds(self) -> u16 {
         self.dms_parts(true).3
     }
@@ -253,12 +254,27 @@ impl DecimalDegree {
 
     /// Parts of the angle as in the DMS scheme.
     ///
-    /// There is a situation when the degree part not the same as the result of `self.degrees()`.
-    /// When the angle's value is too close to whole degree (in terms of internal representation),
-    /// but in terms of the DMS, its already the whole angle, e.g.
+    /// There is a corner case when the degree part returned is not the same as the result of [`degrees()`](#method.degrees):
+    /// when the angle's value is too close to a whole degree
+    /// in terms of internal representation, but still slightly less than it.
     ///
-    /// for angle `35.9999999` the `degrees()` function returns 35
-    /// but the `deg_min_sec_mas()` returns (36, 0, 0, 0) due to rounding rules
+    /// However, in terms of the DMS, it is already represented as a whole degree
+    /// since the distance is too small to be represented in DMS scheme.
+    ///
+    ///```
+    /// # use geod::DecimalDegree;
+    /// # use std::convert::TryFrom;
+    /// let a = DecimalDegree::try_from(35.9999999).unwrap();
+    ///
+    /// assert_eq!(a.degrees(), 35);
+    /// assert_eq!(a.arc_minutes(), 59);
+    /// assert_eq!(a.arc_seconds(), 59);
+    /// assert_eq!(a.milli_arc_seconds(), 999);
+    ///
+    /// // the value is closer to 36 than to 35 59'59.999"
+    /// // and therefore rounds up
+    /// assert_eq!(a.deg_min_sec_mas(), (36, 0, 0, 0));
+    /// ```
     pub fn deg_min_sec_mas(self) -> (u16, u8, u8, u16) {
         self.dms_parts(false)
     }

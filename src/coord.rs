@@ -120,6 +120,7 @@ where
     }
 }
 
+#[doc(hidden)]
 #[macro_export]
 /// Implements simple two variants enum associated with the boolean type
 macro_rules! bool_enum {
@@ -197,6 +198,7 @@ macro_rules! bool_enum {
     };
 }
 
+#[doc(hidden)]
 #[macro_export]
 /// Allows to implement some `TryFrom` implementations for a type:
 /// - TryFrom<T1>

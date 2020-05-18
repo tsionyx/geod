@@ -12,9 +12,10 @@ mod errors;
 pub use errors::AngleNotInRange;
 
 #[allow(clippy::module_name_repetitions)]
-/// Common terminology for angles
+/// Common terminology for angles:
 /// <https://en.wikipedia.org/wiki/Angle#Individual_angles>
 pub trait AngleNames: Copy + PartialOrd {
+    /// No angle
     fn zero() -> Self;
 
     /// The angle made of perpendicular rays
@@ -63,7 +64,7 @@ pub trait AngleNames: Copy + PartialOrd {
 }
 
 /// Angle with ordering, addition/subtraction operations and
-/// the abilities to construct itself from a string or float number
+/// the abilities to construct itself from a string or a float number
 pub trait Angle:
     AngleNames
     + Ord
@@ -77,17 +78,17 @@ pub trait Angle:
     /// The error that can appear while parsing the angle from a string
     type ParseErr: Error;
 
-    /// Adjacent angle which sum to a right angle
+    /// Adjacent angle which sum to a [right](trait.AngleNames.html#tymethod.right) angle
     fn complement(self) -> Option<Self> {
         Self::right().checked_sub(&self)
     }
 
-    /// Adjacent angle which sum to a straight angle
+    /// Adjacent angle which sum to a [straight](trait.AngleNames.html#tymethod.straight) angle
     fn supplement(self) -> Option<Self> {
         Self::straight().checked_sub(&self)
     }
 
-    /// Adjacent angle which sum to a complete angle
+    /// Adjacent angle which sum to a [complete](trait.AngleNames.html#tymethod.complete) angle
     fn explement(self) -> Self {
         Self::complete()
             .checked_sub(&self)
@@ -111,10 +112,10 @@ pub trait Angle:
         self == other
     }
 
-    /// Produce an error when the angles more than the right one are invalid
+    /// Produce an error when the angles more than the [right](trait.AngleNames.html#tymethod.right) one are invalid
     fn obtuse_detected() -> Self::NumErr;
 
-    /// Produce an error when the angles more than the straight one are invalid
+    /// Produce an error when the angles more than the [straight](trait.AngleNames.html#tymethod.straight) one are invalid
     fn reflex_detected() -> Self::NumErr;
 }
 
@@ -129,6 +130,7 @@ pub(super) trait UnitsAngle: Angle {
     }
 }
 
+#[doc(hidden)]
 #[macro_export]
 /// Implement addition and subtraction operations
 /// on the `UnitsAngle` types.

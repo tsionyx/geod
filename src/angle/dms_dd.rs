@@ -1,5 +1,5 @@
 //! The angle implementation can be used to store and process either:
-//!  - degrees with their decimal fractions with the micro (10^-6) precision;
+//!  - degrees with their decimal fractions with the micro (10<sup>-6</sup>) precision;
 //!  - or DMS (degrees, minutes, seconds) with the centi (1/100-th) of arcsecond precision.
 //!
 //! Operands with the different representations can produce
@@ -35,8 +35,9 @@ use super::{
     Angle, AngleNames, UnitsAngle,
 };
 
-/// The structure can accurately store _either_ decimal fractions of the degree (with the 10^-6 degrees precision)
-/// _or_ degree, minute, second (with the 10^-2 arcsecond precision).
+/// The implementation can accurately store _either_ decimal fractions of the degree
+/// (with the 10<sup>-6</sup> degrees precision)
+/// _or_ degree, minute, second (with the 10<sup>-2</sup> arcsecond precision).
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Default, Copy, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct AccurateDegree {
@@ -147,8 +148,9 @@ impl AccurateDegree {
         Ok(Self { units })
     }
 
-    /// Degree, minute, second, centisecond
-    /// <https://en.wikipedia.org/wiki/Minute_and_second_of_arc>
+    /// Degree, minute, second, centisecond.
+    ///
+    /// [Read more](https://en.wikipedia.org/wiki/Minute_and_second_of_arc)
     ///
     /// # Errors
     /// When some part of the angle is out of scope
@@ -216,7 +218,7 @@ impl AccurateDegree {
         degrees as u16
     }
 
-    /// The microdegrees (10^-6 degrees) component of the angle
+    /// The microdegrees (10<sup>-6</sup> degrees) component of the angle
     pub fn deg_fract(self) -> u32 {
         let fract_units = self.units % Self::units_in_deg();
         fract_units.div_round(Self::micro_deg_to_unit_coef())
@@ -235,9 +237,9 @@ impl AccurateDegree {
     /// The centi arc seconds (1/100-th of the arc second) component of the angle.
     ///
     /// Use with caution! The overflow of `0.999_999` degrees
-    /// handled incorrectly to keep the `self.degrees()` value valid.
-    /// To get the precise values in such a boundary condition,
-    /// use the `self.deg_min_sec_cas()` instead.
+    /// intentionally handled incorrectly to keep the [`degrees`](#method.degrees) value valid.
+    /// To get the accurate value in such a boundary condition,
+    /// use [`deg_min_sec_cas`](#method.deg_min_sec_cas) instead.
     pub fn centi_arc_seconds(self) -> u8 {
         self.dms_parts(true).3
     }
@@ -276,12 +278,27 @@ impl AccurateDegree {
 
     /// Parts of the angle as in the DMS scheme.
     ///
-    /// There is a situation when the degree part not the same as the result of `self.degrees()`.
-    /// When the angle's value is too close to whole degree (in terms of internal representation),
-    /// but in terms of the DMS, its already the whole angle, e.g.
+    /// There is a corner case when the degree part returned is not the same as the result of [`degrees()`](#method.degrees):
+    /// when the angle's value is too close to a whole degree
+    /// in terms of internal representation, but still slightly less than it.
     ///
-    /// for angle `35.999999` the `degrees()` function returns 35
-    /// but the `deg_min_sec_cas()` returns (36, 0, 0, 0) due to rounding rules
+    /// However, in terms of the DMS, it is already represented as a whole degree
+    /// since the distance is too small to be represented in DMS scheme.
+    ///
+    ///```
+    /// # use geod::AccurateDegree;
+    /// # use std::convert::TryFrom;
+    /// let a = AccurateDegree::try_from(35.999999).unwrap();
+    ///
+    /// assert_eq!(a.degrees(), 35);
+    /// assert_eq!(a.arc_minutes(), 59);
+    /// assert_eq!(a.arc_seconds(), 59);
+    /// assert_eq!(a.centi_arc_seconds(), 99);
+    ///
+    /// // the value is closer to 36 than to 35 59'59.99"
+    /// // and therefore rounds up
+    /// assert_eq!(a.deg_min_sec_cas(), (36, 0, 0, 0));
+    /// ```
     pub fn deg_min_sec_cas(self) -> (u16, u8, u8, u8) {
         self.dms_parts(false)
     }

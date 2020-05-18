@@ -17,7 +17,7 @@
 #![warn(missing_doc_code_examples)]
 #![warn(missing_docs)]
 #![warn(non_ascii_idents)]
-#![warn(private_doc_tests)]
+// #![warn(private_doc_tests)]
 #![warn(single_use_lifetimes)]
 #![warn(trivial_casts)]
 #![warn(trivial_numeric_casts)]
@@ -40,7 +40,7 @@
 // TODO: remove this cast's warnings
 #![allow(clippy::cast_possible_truncation)]
 
-pub use angle::{dd::DecimalDegree, dms_dd::AccurateDegree, Angle};
+pub use angle::{dd::DecimalDegree, dms_dd::AccurateDegree, Angle, AngleNames};
 pub use coord::{Latitude, Longitude, Point};
 
 mod angle;

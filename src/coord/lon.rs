@@ -17,8 +17,8 @@ use super::{AngleAndDirection, ParseCoordinateError, ParsedCoordinate};
 bool_enum!(RotationalDirection: East and West; parse from 'E':'W' with ParseDirectionError);
 
 /// The angle measured on the equatorial plane between the meridian of the point
-/// and the prime meridian (Greenwich, UK)
-/// <https://en.wikipedia.org/wiki/Longitude>
+/// and the prime meridian (Greenwich, UK).
+/// [Read more](https://en.wikipedia.org/wiki/Longitude).
 #[derive(Debug, Copy, Clone, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Longitude<A: Angle>(A);
@@ -35,8 +35,8 @@ impl<A: Angle> Longitude<A> {
     ///
     /// # Errors
     /// - cannot construct an angle from the given information (overflow of some kind)
-    /// - the constructed angle is more than the straight angle
-    ///   (0 <= longitude <= 180 deg)
+    /// - the constructed angle is more than the [straight](trait.AngleNames.html#tymethod.straight) angle.
+    ///   Valid longitude is in the range `0 <= lon <= 180 deg`.
     pub fn east<T>(to_angle: T) -> Result<Self, A::NumErr>
     where
         T: TryInto<A, Error = A::NumErr>,
@@ -50,8 +50,8 @@ impl<A: Angle> Longitude<A> {
     ///
     /// # Errors
     /// - cannot construct an angle from the given information (overflow of some kind)
-    /// - the constructed angle is more than the straight angle
-    ///   (0 <= longitude <= 180 deg)
+    /// - the constructed angle is more than the [straight](trait.AngleNames.html#tymethod.straight) angle.
+    ///   Valid longitude is in the range `0 <= lon <= 180 deg`.
     pub fn west<T>(to_angle: T) -> Result<Self, A::NumErr>
     where
         T: TryInto<A, Error = A::NumErr>,
@@ -61,8 +61,7 @@ impl<A: Angle> Longitude<A> {
             .and_then(|angle| Self::with_angle_and_direction(angle, West))
     }
 
-    /// The chosen 0-meridian (only a convention)
-    /// <https://en.wikipedia.org/wiki/Prime_meridian>
+    /// The chosen by convention [0-meridian](https://en.wikipedia.org/wiki/Prime_meridian)
     pub fn prime() -> Self {
         Self(A::zero())
     }

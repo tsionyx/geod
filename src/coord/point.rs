@@ -34,7 +34,7 @@ impl<A: Angle> Point<A> {
     /// latitude and longitude.
     ///
     /// # Errors
-    /// - cannot construct latitude or longitude from the given numbers (overflow of some kind)
+    /// An overflow of some kind can appear when constructing latitude or longitude from the given numbers.
     pub fn with_coordinates<Lat, Lon>(lat: Lat, lon: Lon) -> Result<Self, A::NumErr>
     where
         Latitude<A>: TryFrom<Lat, Error = A::NumErr>,

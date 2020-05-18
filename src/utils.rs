@@ -2,16 +2,7 @@
 
 use std::ops::{Div, Neg, Rem};
 
-#[macro_export]
-/// Creates an array of given size from a slice
-macro_rules! arr_with {
-    ($slice: expr; $size: expr) => {{
-        let mut arr = [Default::default(); $size];
-        arr.copy_from_slice($slice);
-        arr
-    }};
-}
-
+#[doc(hidden)]
 #[macro_export]
 /// Implements `From` trait for newtype-like enum variants
 macro_rules! enum_trivial_from_impl {
@@ -121,7 +112,7 @@ where
 }
 
 /// Round up the integer division when the remainder is big enough
-pub trait RoundDiv {
+pub(crate) trait RoundDiv {
     fn div_round(self, y: Self) -> Self;
 }
 

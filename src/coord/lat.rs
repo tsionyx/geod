@@ -16,8 +16,8 @@ use super::{AngleAndDirection, ParseCoordinateError, ParsedCoordinate};
 
 bool_enum!(Pole: North and South; parse from 'N':'S' with ParsePoleError);
 
-/// The angle measured between the equatorial plane and the point along the meridian
-/// <https://en.wikipedia.org/wiki/Latitude>
+/// The angle measured between the equatorial plane and the point along the meridian.
+/// [Read more](https://en.wikipedia.org/wiki/Latitude).
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Copy, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Latitude<A: Angle>(A);
@@ -27,8 +27,8 @@ impl<A: Angle> Latitude<A> {
     ///
     /// # Errors
     /// - cannot construct an angle from the given information (overflow of some kind)
-    /// - the constructed angle is more than the right angle
-    ///   (0 <= latitude <= 90 deg)
+    /// - the constructed angle is more than the [right](trait.AngleNames.html#tymethod.right) angle.
+    ///   Valid latitude is in the range `0 <= lat <= 90 deg`.
     pub fn north<T>(angle: T) -> Result<Self, A::NumErr>
     where
         T: TryInto<A, Error = A::NumErr>,
@@ -42,8 +42,8 @@ impl<A: Angle> Latitude<A> {
     ///
     /// # Errors
     /// - cannot construct an angle from the given information (overflow of some kind)
-    /// - the constructed angle is more than the right angle
-    ///   (0 <= latitude <= 90 deg)
+    /// - the constructed angle is more than the [right](trait.AngleNames.html#tymethod.right) angle.
+    ///   Valid latitude is in the range `0 <= lat <= 90 deg`.
     pub fn south<T>(angle: T) -> Result<Self, A::NumErr>
     where
         T: TryInto<A, Error = A::NumErr>,

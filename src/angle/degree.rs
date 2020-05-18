@@ -10,6 +10,7 @@ pub(crate) const FULL_TURN_DEG: u16 = MAX_DEGREE;
 pub(crate) const HALF_TURN_DEG: u16 = FULL_TURN_DEG >> 1;
 pub(crate) const QUARTER_TURN_DEG: u16 = HALF_TURN_DEG >> 1;
 
+#[doc(hidden)]
 #[macro_export]
 /// Implement the Angle traits for the type representing degrees
 macro_rules! impl_angle_traits {
@@ -47,6 +48,7 @@ macro_rules! impl_angle_traits {
     };
 }
 
+#[doc(hidden)]
 #[macro_export]
 /// Implement the conversion traits for the type representing degrees
 macro_rules! impl_conv_traits {
