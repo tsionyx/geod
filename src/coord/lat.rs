@@ -91,9 +91,7 @@ impl<A: Angle> AngleAndDirection<A> for Latitude<A> {
     type Direction = Pole;
 
     fn with_angle_and_direction(angle: A, hemisphere: Self::Direction) -> Result<Self, A::NumErr> {
-        if angle > A::right() {
-            return Err(A::obtuse_detected());
-        }
+        let angle = angle.and_not_obtuse()?;
 
         let angle = match hemisphere {
             North => angle.checked_add(&A::right()),

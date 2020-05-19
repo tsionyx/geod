@@ -37,11 +37,11 @@ macro_rules! impl_angle_traits {
             type NumErr = AngleNotInRange;
             type ParseErr = ParseAngleError;
 
-            fn obtuse_detected() -> Self::NumErr {
+            fn obtuse_err() -> Self::NumErr {
                 AngleNotInRange::ObtuseAngle
             }
 
-            fn reflex_detected() -> Self::NumErr {
+            fn reflex_err() -> Self::NumErr {
                 AngleNotInRange::ReflexAngle
             }
         }

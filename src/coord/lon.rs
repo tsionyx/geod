@@ -159,9 +159,7 @@ impl<A: Angle> AngleAndDirection<A> for Longitude<A> {
     type Direction = RotationalDirection;
 
     fn with_angle_and_direction(angle: A, direction: Self::Direction) -> Result<Self, A::NumErr> {
-        if angle.is_reflex() {
-            return Err(A::reflex_detected());
-        }
+        let angle = angle.and_not_reflex()?;
 
         let angle = match direction {
             East => angle,

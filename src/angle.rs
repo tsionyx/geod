@@ -112,11 +112,35 @@ pub trait Angle:
         self == other
     }
 
-    /// Produce an error when the angles more than the [right](trait.AngleNames.html#tymethod.right) one are invalid
-    fn obtuse_detected() -> Self::NumErr;
+    /// Produce an error variant indicating an angle is more than the [right](trait.AngleNames.html#tymethod.right) one
+    fn obtuse_err() -> Self::NumErr;
 
-    /// Produce an error when the angles more than the [straight](trait.AngleNames.html#tymethod.straight) one are invalid
-    fn reflex_detected() -> Self::NumErr;
+    /// Produce an error variant indicating an angle is [reflex](trait.AngleNames.html#tymethod.is_reflex)
+    fn reflex_err() -> Self::NumErr;
+
+    /// Check the angle is less than or equal to the [right](trait.AngleNames.html#tymethod.right) one
+    ///
+    /// # Errors
+    /// When the angle is greater than 90 degrees
+    fn and_not_obtuse(self) -> Result<Self, Self::NumErr> {
+        if self > Self::right() {
+            Err(Self::obtuse_err())
+        } else {
+            Ok(self)
+        }
+    }
+
+    /// Check the angle is less than or equal to the [straight](trait.AngleNames.html#tymethod.straight) one
+    ///
+    /// # Errors
+    /// When the angle is greater than 180 degrees
+    fn and_not_reflex(self) -> Result<Self, Self::NumErr> {
+        if self.is_reflex() {
+            Err(Self::reflex_err())
+        } else {
+            Ok(self)
+        }
+    }
 }
 
 pub(super) trait UnitsAngle: Angle {
