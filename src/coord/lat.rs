@@ -3,7 +3,7 @@ use std::{
     convert::{TryFrom, TryInto},
     error::Error,
     fmt,
-    ops::Neg,
+    ops::{Add, Neg, Sub},
     str::FromStr,
 };
 
@@ -206,6 +206,32 @@ mod partial_try_from {
 }
 
 try_from_tuples_and_arrays!((Latitude<A> where A: Angle, NumErr) <- i16, u8, u8, u16; i16);
+
+impl<A: Angle> Add<A> for Latitude<A> {
+    type Output = Result<Self, A::NumErr>;
+
+    /// Represent the north movement
+    fn add(self, rhs: A) -> Self::Output {
+        let angle = self.0.checked_add(&rhs).ok_or_else(A::turn_err)?;
+
+        // farther north than the north pole
+        let angle = angle.and_not_reflex()?;
+        Ok(Self(angle))
+    }
+}
+
+impl<A: Angle> Sub<A> for Latitude<A> {
+    type Output = Result<Self, A::NumErr>;
+
+    /// Represent the south movement
+    fn sub(self, rhs: A) -> Self::Output {
+        // farther south than the south pole
+        let angle = self.0.checked_sub(&rhs).ok_or_else(A::turn_err)?;
+
+        assert!(!angle.is_reflex());
+        Ok(Self(angle))
+    }
+}
 
 impl<A: Angle> FromStr for Latitude<A>
 where
@@ -981,5 +1007,97 @@ mod bad_parse_tests_dec {
     #[should_panic(expected = "NoHemisphere")]
     fn bad_hemisphere() {
         let _l: Latitude<DecimalDegree> = "18.15Z°".parse().unwrap();
+    }
+}
+
+#[cfg(test)]
+mod arith_tests {
+    use super::*;
+    use crate::angle::{dd::DecimalDegree, dms_dd::AccurateDegree};
+
+    #[test]
+    fn simply_north() {
+        let l: Latitude<AccurateDegree> = (35, 12).try_into().unwrap();
+        assert_eq!(l.hemisphere(), Some(North));
+
+        let move_north = (12, 16, 5).try_into().unwrap();
+        let l2 = (l + move_north).unwrap();
+        assert_eq!(l2.hemisphere(), Some(North));
+        assert_eq!(
+            l2.angle_from_equator(),
+            AccurateDegree::with_dms(47, 28, 5, 0).unwrap()
+        )
+    }
+
+    #[test]
+    fn cross_the_equator_while_going_north() {
+        let l: Latitude<DecimalDegree> = (-35, 12).try_into().unwrap();
+        assert_eq!(l.hemisphere(), Some(South));
+
+        let move_north = (47, 16, 5).try_into().unwrap();
+        let l2 = (l + move_north).unwrap();
+        assert_eq!(l2.hemisphere(), Some(North));
+        assert_eq!(
+            l2.angle_from_equator(),
+            DecimalDegree::with_dms(12, 4, 5, 0).unwrap()
+        )
+    }
+
+    #[test]
+    #[should_panic(expected = "ReflexAngle")]
+    fn go_beyond_north_pole() {
+        let l: Latitude<DecimalDegree> = (-35, 12).try_into().unwrap();
+        assert_eq!(l.hemisphere(), Some(South));
+
+        let move_north = (140, 56, 11).try_into().unwrap();
+        let _l2 = (l + move_north).unwrap();
+    }
+
+    #[test]
+    #[should_panic(expected = "Degrees")]
+    fn go_beyond_north_pole_bad_angle() {
+        let l: Latitude<DecimalDegree> = (65, 33).try_into().unwrap();
+        assert_eq!(l.hemisphere(), Some(North));
+
+        let move_north = (300, 56, 11).try_into().unwrap();
+        let _l2 = (l + move_north).unwrap();
+    }
+
+    #[test]
+    fn simply_south() {
+        let l: Latitude<DecimalDegree> = (-10, 8, 49, 25).try_into().unwrap();
+        assert_eq!(l.hemisphere(), Some(South));
+
+        let move_south = (32, 33, 40).try_into().unwrap();
+        let l2 = (l - move_south).unwrap();
+        assert_eq!(l2.hemisphere(), Some(South));
+        assert_eq!(
+            l2.angle_from_equator(),
+            DecimalDegree::with_dms(42, 42, 29, 25).unwrap()
+        )
+    }
+
+    #[test]
+    fn cross_the_equator_while_going_south() {
+        let l: Latitude<AccurateDegree> = (15, 31, 59).try_into().unwrap();
+        assert_eq!(l.hemisphere(), Some(North));
+
+        let move_south = (81, 51, 8).try_into().unwrap();
+        let l2 = (l - move_south).unwrap();
+        assert_eq!(l2.hemisphere(), Some(South));
+        assert_eq!(
+            l2.angle_from_equator(),
+            AccurateDegree::with_dms(66, 19, 9, 0).unwrap()
+        )
+    }
+
+    #[test]
+    #[should_panic(expected = "Degrees")]
+    fn go_beyond_south_pole() {
+        let l: Latitude<DecimalDegree> = (-35, 12).try_into().unwrap();
+        assert_eq!(l.hemisphere(), Some(South));
+
+        let move_south = (60, 56, 11).try_into().unwrap();
+        let _l2 = (l - move_south).unwrap();
     }
 }

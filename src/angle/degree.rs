@@ -44,6 +44,10 @@ macro_rules! impl_angle_traits {
             fn reflex_err() -> Self::NumErr {
                 AngleNotInRange::ReflexAngle
             }
+
+            fn turn_err() -> Self::NumErr {
+                AngleNotInRange::Degrees
+            }
         }
     };
 }

@@ -118,6 +118,9 @@ pub trait Angle:
     /// Produce an error variant indicating an angle is [reflex](trait.AngleNames.html#tymethod.is_reflex)
     fn reflex_err() -> Self::NumErr;
 
+    /// Produce an error variant indicating an angle does not fall into [full circle](trait.AngleNames.html#tymethod.complete)
+    fn turn_err() -> Self::NumErr;
+
     /// Check the angle is less than or equal to the [right](trait.AngleNames.html#tymethod.right) one
     ///
     /// # Errors

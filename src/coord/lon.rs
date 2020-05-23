@@ -3,7 +3,7 @@ use std::{
     convert::{TryFrom, TryInto},
     error::Error,
     fmt,
-    ops::Neg,
+    ops::{Add, Neg, Sub},
     str::FromStr,
 };
 
@@ -258,6 +258,24 @@ mod partial_try_from {
 }
 
 try_from_tuples_and_arrays!((Longitude<A> where A: Angle, NumErr) <- i16, u8, u8, u16; i16);
+
+impl<A: Angle> Add<A> for Longitude<A> {
+    type Output = Self;
+
+    /// Represent the east movement
+    fn add(self, rhs: A) -> Self::Output {
+        Self(self.0 + rhs)
+    }
+}
+
+impl<A: Angle> Sub<A> for Longitude<A> {
+    type Output = Self;
+
+    /// Represent the west movement
+    fn sub(self, rhs: A) -> Self::Output {
+        Self(self.0 - rhs)
+    }
+}
 
 impl<A: Angle> FromStr for Longitude<A>
 where
@@ -1145,5 +1163,102 @@ mod bad_parse_tests_dec {
         assert_eq!(-l_east, l_west);
 
         assert_eq!(l_east.angle().degrees(), 123);
+    }
+}
+
+#[cfg(test)]
+mod arith_tests {
+    use super::*;
+    use crate::angle::{dd::DecimalDegree, dms_dd::AccurateDegree, AngleNames};
+
+    #[test]
+    fn simply_east() {
+        let l: Longitude<AccurateDegree> = (58, 2, 45).try_into().unwrap();
+        assert_eq!(l.direction(), Some(East));
+
+        let move_east = (120, 16, 5).try_into().unwrap();
+        let l2 = l + move_east;
+        assert_eq!(l2.direction(), Some(East));
+        assert_eq!(
+            l2.angle(),
+            AccurateDegree::with_dms(178, 18, 50, 0).unwrap()
+        )
+    }
+
+    #[test]
+    fn cross_the_prime_while_going_east() {
+        let l: Longitude<DecimalDegree> = (-35, 12).try_into().unwrap();
+        assert_eq!(l.direction(), Some(West));
+
+        let move_east = (47, 16, 5).try_into().unwrap();
+        let l2 = l + move_east;
+        assert_eq!(l2.direction(), Some(East));
+        assert_eq!(l2.angle(), DecimalDegree::with_dms(12, 4, 5, 0).unwrap())
+    }
+
+    #[test]
+    fn cross_the_180_while_going_east() {
+        let l: Longitude<AccurateDegree> = (123, 42).try_into().unwrap();
+        assert_eq!(l.direction(), Some(East));
+
+        let move_east = (80, 6, 33).try_into().unwrap();
+        let l2 = l + move_east;
+        assert_eq!(l2.direction(), Some(West));
+        assert_eq!(
+            l2.angle(),
+            AccurateDegree::with_dms(156, 11, 27, 0).unwrap()
+        )
+    }
+
+    #[test]
+    fn around_the_world_east() {
+        let l: Longitude<DecimalDegree> = (35, 12, 11).try_into().unwrap();
+        assert_eq!(l.direction(), Some(East));
+
+        let move_east = DecimalDegree::complete();
+        assert_eq!(l, l + move_east);
+    }
+
+    #[test]
+    fn simply_west() {
+        let l: Longitude<AccurateDegree> = (120, 16, 5).try_into().unwrap();
+        assert_eq!(l.direction(), Some(East));
+
+        let move_west = (58, 2, 45).try_into().unwrap();
+
+        let l2 = l - move_west;
+        assert_eq!(l2.direction(), Some(East));
+        assert_eq!(l2.angle(), AccurateDegree::with_dms(62, 13, 20, 0).unwrap())
+    }
+
+    #[test]
+    fn cross_the_prime_while_going_west() {
+        let l: Longitude<DecimalDegree> = (35, 12).try_into().unwrap();
+        assert_eq!(l.direction(), Some(East));
+
+        let move_west = (47, 16, 5).try_into().unwrap();
+        let l2 = l - move_west;
+        assert_eq!(l2.direction(), Some(West));
+        assert_eq!(l2.angle(), DecimalDegree::with_dms(12, 4, 5, 0).unwrap())
+    }
+
+    #[test]
+    fn cross_the_180_while_going_west() {
+        let l: Longitude<DecimalDegree> = (-123, 42).try_into().unwrap();
+        assert_eq!(l.direction(), Some(West));
+
+        let move_west = (80, 6, 33).try_into().unwrap();
+        let l2 = l - move_west;
+        assert_eq!(l2.direction(), Some(East));
+        assert_eq!(l2.angle(), DecimalDegree::with_dms(156, 11, 27, 0).unwrap())
+    }
+
+    #[test]
+    fn around_the_world_west() {
+        let l: Longitude<AccurateDegree> = (-35, 12, 11).try_into().unwrap();
+        assert_eq!(l.direction(), Some(West));
+
+        let move_west = AccurateDegree::complete();
+        assert_eq!(l, l - move_west);
     }
 }
