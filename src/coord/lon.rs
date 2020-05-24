@@ -277,6 +277,14 @@ impl<A: Angle> Sub<A> for Longitude<A> {
     }
 }
 
+impl<A: Angle> Sub for Longitude<A> {
+    type Output = A;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        self.0 - rhs.0
+    }
+}
+
 impl<A: Angle> FromStr for Longitude<A>
 where
     A::ParseErr: From<A::NumErr>,
@@ -1224,9 +1232,9 @@ mod arith_tests {
         let l: Longitude<AccurateDegree> = (120, 16, 5).try_into().unwrap();
         assert_eq!(l.direction(), Some(East));
 
-        let move_west = (58, 2, 45).try_into().unwrap();
+        let move_west = AccurateDegree::try_from((58, 2, 45)).unwrap();
 
-        let l2 = l - move_west;
+        let l2: Longitude<_> = l - move_west;
         assert_eq!(l2.direction(), Some(East));
         assert_eq!(l2.angle(), AccurateDegree::with_dms(62, 13, 20, 0).unwrap())
     }
@@ -1236,8 +1244,8 @@ mod arith_tests {
         let l: Longitude<DecimalDegree> = (35, 12).try_into().unwrap();
         assert_eq!(l.direction(), Some(East));
 
-        let move_west = (47, 16, 5).try_into().unwrap();
-        let l2 = l - move_west;
+        let move_west: DecimalDegree = (47, 16, 5).try_into().unwrap();
+        let l2: Longitude<_> = l - move_west;
         assert_eq!(l2.direction(), Some(West));
         assert_eq!(l2.angle(), DecimalDegree::with_dms(12, 4, 5, 0).unwrap())
     }
@@ -1247,8 +1255,8 @@ mod arith_tests {
         let l: Longitude<DecimalDegree> = (-123, 42).try_into().unwrap();
         assert_eq!(l.direction(), Some(West));
 
-        let move_west = (80, 6, 33).try_into().unwrap();
-        let l2 = l - move_west;
+        let move_west = DecimalDegree::try_from((80, 6, 33)).unwrap();
+        let l2: Longitude<_> = l - move_west;
         assert_eq!(l2.direction(), Some(East));
         assert_eq!(l2.angle(), DecimalDegree::with_dms(156, 11, 27, 0).unwrap())
     }
@@ -1260,5 +1268,36 @@ mod arith_tests {
 
         let move_west = AccurateDegree::complete();
         assert_eq!(l, l - move_west);
+    }
+
+    #[test]
+    fn diff_between_east_and_west() {
+        let l: Longitude<AccurateDegree> = (15, 31, 59).try_into().unwrap();
+        assert_eq!(l.direction(), Some(East));
+        let l2: Longitude<_> = (-66, 19, 9).try_into().unwrap();
+        assert_eq!(l2.direction(), Some(West));
+
+        let diff = l - l2;
+        assert_eq!(diff, (81, 51, 8).try_into().unwrap());
+    }
+
+    #[test]
+    fn diff_equal_is_zero() {
+        let l: Longitude<DecimalDegree> = (15, 31, 59).try_into().unwrap();
+        assert_eq!(l.direction(), Some(East));
+        let l2: Longitude<_> = (15, 31, 59).try_into().unwrap();
+
+        let diff = l - l2;
+        assert_eq!(diff, 0.try_into().unwrap());
+    }
+
+    #[test]
+    fn less_from_greater_is_almost_a_circle() {
+        let l: Longitude<AccurateDegree> = (15, 31, 59).try_into().unwrap();
+        assert_eq!(l.direction(), Some(East));
+        let l2: Longitude<_> = (16, 31, 59).try_into().unwrap();
+
+        let diff = l - l2;
+        assert_eq!(diff, 359.try_into().unwrap());
     }
 }

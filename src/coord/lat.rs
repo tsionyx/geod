@@ -233,6 +233,14 @@ impl<A: Angle> Sub<A> for Latitude<A> {
     }
 }
 
+impl<A: Angle> Sub for Latitude<A> {
+    type Output = Result<A, A::NumErr>;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        self.0.checked_sub(&rhs.0).ok_or_else(A::turn_err)
+    }
+}
+
 impl<A: Angle> FromStr for Latitude<A>
 where
     A::ParseErr: From<A::NumErr>,
@@ -1068,7 +1076,7 @@ mod arith_tests {
         let l: Latitude<DecimalDegree> = (-10, 8, 49, 25).try_into().unwrap();
         assert_eq!(l.hemisphere(), Some(South));
 
-        let move_south = (32, 33, 40).try_into().unwrap();
+        let move_south = DecimalDegree::try_from((32, 33, 40)).unwrap();
         let l2 = (l - move_south).unwrap();
         assert_eq!(l2.hemisphere(), Some(South));
         assert_eq!(
@@ -1082,7 +1090,7 @@ mod arith_tests {
         let l: Latitude<AccurateDegree> = (15, 31, 59).try_into().unwrap();
         assert_eq!(l.hemisphere(), Some(North));
 
-        let move_south = (81, 51, 8).try_into().unwrap();
+        let move_south = AccurateDegree::try_from((81, 51, 8)).unwrap();
         let l2 = (l - move_south).unwrap();
         assert_eq!(l2.hemisphere(), Some(South));
         assert_eq!(
@@ -1097,7 +1105,38 @@ mod arith_tests {
         let l: Latitude<DecimalDegree> = (-35, 12).try_into().unwrap();
         assert_eq!(l.hemisphere(), Some(South));
 
-        let move_south = (60, 56, 11).try_into().unwrap();
+        let move_south: DecimalDegree = (60, 56, 11).try_into().unwrap();
         let _l2 = (l - move_south).unwrap();
+    }
+
+    #[test]
+    fn diff_between_north_and_south() {
+        let l: Latitude<AccurateDegree> = (15, 31, 59).try_into().unwrap();
+        assert_eq!(l.hemisphere(), Some(North));
+        let l2: Latitude<_> = (-66, 19, 9).try_into().unwrap();
+        assert_eq!(l2.hemisphere(), Some(South));
+
+        let diff = (l - l2).unwrap();
+        assert_eq!(diff, (81, 51, 8).try_into().unwrap());
+    }
+
+    #[test]
+    fn diff_equal_is_zero() {
+        let l: Latitude<DecimalDegree> = (15, 31, 59).try_into().unwrap();
+        assert_eq!(l.hemisphere(), Some(North));
+        let l2: Latitude<_> = (15, 31, 59).try_into().unwrap();
+
+        let diff = (l - l2).unwrap();
+        assert_eq!(diff, 0.try_into().unwrap());
+    }
+
+    #[test]
+    #[should_panic(expected = "Degrees")]
+    fn less_from_greater_is_undef() {
+        let l: Latitude<AccurateDegree> = (15, 31, 59).try_into().unwrap();
+        assert_eq!(l.hemisphere(), Some(North));
+        let l2: Latitude<_> = (16, 31, 59).try_into().unwrap();
+
+        let _diff = (l - l2).unwrap();
     }
 }
