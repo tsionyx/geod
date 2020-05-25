@@ -62,6 +62,14 @@ impl<A: Angle> Point<A> {
     pub fn is_pole(&self) -> bool {
         self.lat.is_pole()
     }
+
+    /// The diametrically opposite point
+    pub fn antipodal(&self) -> Self {
+        Self {
+            lat: -self.lat,
+            lon: self.lon.opposite(),
+        }
+    }
 }
 
 impl<A: Angle> PartialEq for Point<A> {
@@ -251,7 +259,7 @@ mod tests_accur {
         let l: Longitude<_> = (-122.427_478_3).try_into().unwrap();
         assert!(Longitude::with_angle_and_direction(
             AccurateDegree::with_dms(122, 25, 38, 92).unwrap(),
-            West
+            West,
         )
         .unwrap()
         .angle()
@@ -421,6 +429,40 @@ mod tests_dec {
             )
             .unwrap(),
             l
+        );
+    }
+}
+
+#[cfg(test)]
+mod tests_arith {
+    use crate::{AccurateDegree, DecimalDegree};
+
+    use super::*;
+
+    #[test]
+    fn simple_antipodal() {
+        let p = Point::<DecimalDegree>::with_coordinates([-32, 46, 10], (3, 1, 11)).unwrap();
+        assert_eq!(
+            p.antipodal(),
+            Point::with_coordinates((32, 46, 10), (-176, 58, 49)).unwrap()
+        );
+    }
+
+    #[test]
+    fn poles_are_antipods() {
+        let np = Point::<AccurateDegree>::north_pole();
+        let sp = Point::south_pole();
+
+        assert_eq!(np.antipodal(), sp);
+        assert_eq!(sp.antipodal(), np);
+    }
+
+    #[test]
+    fn equator_antipodal_is_on_equator() {
+        let p = Point::<DecimalDegree>::with_coordinates(0, (15, 34)).unwrap();
+        assert_eq!(
+            p.antipodal(),
+            Point::with_coordinates(0, (-164, 26)).unwrap()
         );
     }
 }
