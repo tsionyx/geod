@@ -17,7 +17,7 @@ macro_rules! enum_trivial_from_impl {
 
 /// Allow conversion of a signed value into its unsigned equivalent
 /// by dropping the sign away
-pub(crate) trait ToUnsigned<U>: Default + Copy + PartialOrd + Neg<Output = Self> {
+pub trait ToUnsigned<U>: Default + Copy + PartialOrd + Neg<Output = Self> {
     /// represent the source (signed) type as target (unsigned) type
     fn as_type(self) -> U;
 
@@ -56,7 +56,7 @@ impl_unsigned_abs!(i64 -> u64);
 impl_unsigned_abs!(f64);
 
 /// Strip the given character from the beginning or the end
-pub(crate) trait StripChar {
+pub trait StripChar {
     /// Strip the character from the beginning
     fn strip_prefix_char(self, ch: char) -> Option<String>;
     /// Strip the character from the end
@@ -112,7 +112,7 @@ where
 }
 
 /// Round up the integer division when the remainder is big enough
-pub(crate) trait RoundDiv {
+pub trait RoundDiv {
     fn div_round(self, y: Self) -> Self;
 }
 
