@@ -21,8 +21,8 @@ pub trait ToUnsigned<U>: Default + Copy + PartialOrd + Neg<Output = Self> {
     /// represent the source (signed) type as target (unsigned) type
     fn as_type(self) -> U;
 
-    /// Converts to unsigned absolute value
-    fn unsigned_abs(self) -> (U, bool) {
+    /// Converts to unsigned absolute value, also preserving the 'is negative' flag
+    fn abs_and_sign(self) -> (U, bool) {
         if self >= Self::default() {
             (self.as_type(), true)
         } else {
@@ -31,7 +31,7 @@ pub trait ToUnsigned<U>: Default + Copy + PartialOrd + Neg<Output = Self> {
     }
 }
 
-macro_rules! impl_unsigned_abs {
+macro_rules! impl_abs_and_sign {
     ($from: tt -> $to: ty) => {
         impl ToUnsigned<$to> for $from {
             fn as_type(self) -> $to {
@@ -49,11 +49,11 @@ macro_rules! impl_unsigned_abs {
     };
 }
 
-impl_unsigned_abs!(i8 -> u8);
-impl_unsigned_abs!(i16 -> u16);
-impl_unsigned_abs!(i32 -> u32);
-impl_unsigned_abs!(i64 -> u64);
-impl_unsigned_abs!(f64);
+impl_abs_and_sign!(i8 -> u8);
+impl_abs_and_sign!(i16 -> u16);
+impl_abs_and_sign!(i32 -> u32);
+impl_abs_and_sign!(i64 -> u64);
+impl_abs_and_sign!(f64);
 
 /// Strip the given character from the beginning or the end
 pub trait StripChar {
@@ -160,11 +160,11 @@ mod tests {
 
     #[test]
     fn unsigned() {
-        assert_eq!(7_i8.unsigned_abs(), (7_u8, true));
-        assert_eq!((-7_i8).unsigned_abs(), (7_u8, false));
+        assert_eq!(7_i8.abs_and_sign(), (7_u8, true));
+        assert_eq!((-7_i8).abs_and_sign(), (7_u8, false));
 
-        assert_eq!(1283_i16.unsigned_abs(), (1283_u16, true));
-        assert_eq!((-25_038_i16).unsigned_abs(), (25_038_u16, false));
+        assert_eq!(1283_i16.abs_and_sign(), (1283_u16, true));
+        assert_eq!((-25_038_i16).abs_and_sign(), (25_038_u16, false));
     }
 
     //noinspection SpellCheckingInspection

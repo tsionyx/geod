@@ -104,9 +104,9 @@ impl<A: Angle> AngleAndDirection<A> for Latitude<A> {
     }
 }
 
-impl<A: Angle> ParsedCoordinate<A> for Latitude<A>
+impl<A> ParsedCoordinate<A> for Latitude<A>
 where
-    A: FromStr<Err = <A as Angle>::ParseErr>,
+    A: Angle + FromStr<Err = <A as Angle>::ParseErr>,
     A::ParseErr: From<A::NumErr>,
 {
     fn with_angle_only(angle: A) -> Option<Self> {
@@ -147,7 +147,7 @@ impl<A: Angle> TryFrom<f64> for Latitude<A> {
     type Error = A::NumErr;
 
     fn try_from(value: f64) -> Result<Self, Self::Error> {
-        let (value, is_north) = value.unsigned_abs();
+        let (value, is_north) = value.abs_and_sign();
         let angle = value.try_into()?;
         Self::with_angle_and_direction(angle, is_north.into())
     }
@@ -162,7 +162,7 @@ where
     fn try_from(value: (i16, u8, u8, u16)) -> Result<Self, Self::Error> {
         let (deg, min, sec, milli) = value;
 
-        let (deg, sign) = deg.unsigned_abs();
+        let (deg, sign) = deg.abs_and_sign();
         let angle = (deg, min, sec, milli).try_into()?;
 
         Self::with_angle_and_direction(angle, sign.into())
