@@ -78,6 +78,12 @@ jobs:
           command: test
           args: --all-features --all
 
+      - name: Run cargo test (ignored)
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all-features --all -- --ignored
+
   clippy:
     name: Clippy on rust '${{ matrix.rust }}'
     runs-on: ubuntu-latest

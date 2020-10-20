@@ -687,7 +687,7 @@ mod tests {
     #[ignore]
     fn test_first_degree_every_fraction_with_step_1() {
         let mut prev = None;
-        for f in 0..10_000_000 {
+        for f in 0..1_000_000 {
             let angle = AccurateDegree::with_deg_and_fraction(0, f).unwrap();
             assert_eq!(angle.degrees(), 0);
             assert_eq!(angle.deg_fract(), f);

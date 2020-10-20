@@ -23,4 +23,5 @@ script:
   - cargo fmt -- --check
   - cargo clippy --all-targets --all-features --all -- -Dwarnings -W clippy::nursery -W clippy::pedantic
   - cargo test --all-features --all
+  - cargo test --all-features --all -- --ignored
   - cargo audit
