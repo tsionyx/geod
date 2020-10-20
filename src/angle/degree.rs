@@ -100,6 +100,15 @@ macro_rules! impl_conv_traits {
             }
         }
 
+        impl Into<f64> for $t {
+            fn into(self) -> f64 {
+                let degrees = f64::from(self.degrees());
+                let fract =
+                    f64::from(self.deg_fract()) / f64::from(Self::$fraction_multiplier_func());
+                degrees + fract
+            }
+        }
+
         impl $t {
             fn parse_dms(s: &str) -> Result<Self, ParseAngleError> {
                 let capture = RE_UNICODE

@@ -317,7 +317,7 @@ try_from_tuples_and_arrays!((DecimalDegree, AngleNotInRange) <- u16, u8, u8, u16
 
 #[cfg(test)]
 mod tests {
-    use std::mem::size_of;
+    use std::{f64, mem::size_of};
 
     use super::*;
 
@@ -364,6 +364,8 @@ mod tests {
         assert_eq!(polar_circle.degrees(), 66);
         assert_eq!(polar_circle.deg_fract(), 5_633_334);
         assert_eq!(polar_circle.units(), 665_633_334);
+        let as_float: f64 = polar_circle.into();
+        assert!((as_float - 66.563_333_4).abs() < f64::EPSILON);
 
         assert_eq!(polar_circle.arc_minutes(), 33);
         assert_eq!(polar_circle.arc_seconds(), 48);
@@ -376,6 +378,8 @@ mod tests {
         assert!(angle.is_reflex());
         assert_eq!(angle.degrees(), 200);
         assert_eq!(angle.deg_fract(), 0);
+        let as_float: f64 = angle.into();
+        assert!((as_float - 200.0).abs() < f64::EPSILON);
 
         assert_eq!(angle.arc_minutes(), 0);
         assert_eq!(angle.arc_seconds(), 0);
@@ -435,6 +439,8 @@ mod tests {
         assert!(angle.is_complete());
         assert_eq!(angle.degrees(), 360);
         assert_eq!(angle.deg_fract(), 0);
+        let as_float: f64 = angle.into();
+        assert!((as_float - 360.0).abs() < f64::EPSILON);
 
         assert_eq!(angle.arc_minutes(), 0);
         assert_eq!(angle.arc_seconds(), 0);
@@ -487,6 +493,9 @@ mod tests {
 
         let angle2 = DecimalDegree::with_deg_and_fraction(23, 4_999_999).unwrap();
         assert_eq!(angle, angle2);
+
+        let as_float = Into::<f64>::into(angle);
+        assert!((as_float - 23.499_999_9).abs() < f64::EPSILON);
     }
 
     #[test]
@@ -504,6 +513,9 @@ mod tests {
         assert_eq!(angle.arc_minutes(), 30);
         assert_eq!(angle.arc_seconds(), 0);
         assert_eq!(angle.milli_arc_seconds(), 0);
+
+        let as_float: f64 = angle.into();
+        assert!((as_float - 65566.5).abs() < f64::EPSILON);
     }
 
     #[test]
@@ -598,6 +610,8 @@ mod tests {
         assert_eq!(angle.degrees(), 30);
         assert_eq!(angle.deg_fract(), 9_999_999);
         assert_eq!(angle.units(), 309_999_999);
+        let as_float: f64 = angle.into();
+        assert!((as_float - 30.999_999_9).abs() < f64::EPSILON);
 
         assert_eq!(angle.degrees(), 30);
         assert_eq!(angle.arc_minutes(), 59);
@@ -621,6 +635,8 @@ mod tests {
         assert_eq!(angle.degrees(), 30);
         assert_eq!(angle.deg_fract(), 9_999_998);
         assert_eq!(angle.units(), 309_999_998);
+        let as_float: f64 = angle.into();
+        assert!((as_float - 30.999_999_8).abs() < f64::EPSILON);
 
         assert_eq!(angle.degrees(), 30);
         assert_eq!(angle.arc_minutes(), 59);
@@ -658,6 +674,10 @@ mod tests {
             let angle = DecimalDegree::with_deg_and_fraction(0, f).unwrap();
             assert_eq!(angle.degrees(), 0);
             assert_eq!(angle.deg_fract(), f);
+
+            let as_float: f64 = angle.into();
+            assert!((as_float - f64::from(f) / 10_000_000_f64).abs() < f64::EPSILON);
+
             if let Some(prev) = prev {
                 assert!(angle > prev);
                 assert_eq!(
