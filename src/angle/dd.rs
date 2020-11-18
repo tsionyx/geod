@@ -1082,6 +1082,15 @@ mod parse_tests {
     }
 
     #[test]
+    fn deg_min_with_sign() {
+        let angle: DecimalDegree = "28°15'".parse().unwrap();
+        assert_eq!(angle.degrees(), 28);
+        assert_eq!(angle.arc_minutes(), 15);
+        assert_eq!(angle.arc_seconds(), 0);
+        assert_eq!(angle.milli_arc_seconds(), 0);
+    }
+
+    #[test]
     fn deg_min_sec() {
         let angle: DecimalDegree = "28°05′33″".parse().unwrap();
         assert_eq!(angle.degrees(), 28);

@@ -118,7 +118,6 @@ macro_rules! impl_conv_traits {
                 let deg = capture.name("deg").ok_or(ParseAngleError::DmsNotation)?;
                 let deg = deg.as_str().parse()?;
 
-                dbg!(&capture);
                 let min = capture.name("min").map_or("0", |m| m.as_str()).parse()?;
                 let sec = capture.name("sec").map_or("0", |m| m.as_str()).parse()?;
                 let sec_fraction = if let Some(capture) = capture.name("sec_fract") {
@@ -179,7 +178,7 @@ macro_rules! impl_conv_traits {
 /// Construct regular expression to parse Degree-Minute-Second representation of an angle
 pub(super) fn parse_dms_re(is_ascii: bool, arc_seconds_fd: usize) -> String {
     let (deg, min, sec) = if is_ascii {
-        ("\\*?", '\'', '"')
+        ("[\\*°]?", '\'', '"')
     } else {
         ("°", '′', '″')
     };
