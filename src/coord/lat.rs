@@ -55,15 +55,19 @@ impl<A: Angle> Latitude<A> {
 
     /// The central latitude of the sphere equidistant from the poles
     pub fn equator() -> Self {
-        Self(A::right())
+        Self(Self::equator_angle())
+    }
+
+    fn equator_angle() -> A {
+        A::right()
     }
 
     /// Angle between the latitude and the equator (absolute value of the latitude).
     pub fn angle_from_equator(self) -> A {
         let from_south_pole = self.0;
-        let right = A::right();
+        let equator = Self::equator_angle();
 
-        right.abs_diff(from_south_pole)
+        equator.abs_diff(from_south_pole)
     }
 
     /// Which pole are closer to the given latitude
@@ -94,7 +98,7 @@ impl<A: Angle> AngleAndDirection<A> for Latitude<A> {
         let angle = angle.and_not_obtuse()?;
 
         let angle = match hemisphere {
-            North => angle.checked_add(&A::right()),
+            North => angle.checked_add(&Self::equator_angle()),
             South => angle.complement(),
         }
         .expect("Latitude is valid");
