@@ -153,17 +153,17 @@ impl<A: Angle> TryFrom<f64> for Latitude<A> {
     }
 }
 
-impl<A: Angle> TryFrom<(i16, u8, u8, u16)> for Latitude<A>
+impl<A: Angle> TryFrom<(i8, u8, u8, u16)> for Latitude<A>
 where
     A: TryFrom<(u16, u8, u8, u16), Error = <A as Angle>::NumErr>,
 {
     type Error = A::NumErr;
 
-    fn try_from(value: (i16, u8, u8, u16)) -> Result<Self, Self::Error> {
+    fn try_from(value: (i8, u8, u8, u16)) -> Result<Self, Self::Error> {
         let (deg, min, sec, milli) = value;
 
         let (deg, sign) = deg.abs_and_sign();
-        let angle = (deg, min, sec, milli).try_into()?;
+        let angle = (u16::from(deg), min, sec, milli).try_into()?;
 
         Self::with_angle_and_direction(angle, sign.into())
     }
@@ -181,6 +181,7 @@ mod partial_try_from {
 
         fn try_from(value: [i16; 4]) -> Result<Self, Self::Error> {
             let [deg, min, sec, centi] = value;
+            let deg = i8::try_from(deg).map_err(|_| AngleNotInRange::Degrees)?;
             let min = u8::try_from(min).map_err(|_| AngleNotInRange::ArcMinutes)?;
             let sec = u8::try_from(sec).map_err(|_| AngleNotInRange::ArcSeconds)?;
             let centi = u8::try_from(centi).map_err(|_| AngleNotInRange::ArcCentiSeconds)?;
@@ -193,6 +194,7 @@ mod partial_try_from {
 
         fn try_from(value: [i16; 4]) -> Result<Self, Self::Error> {
             let [deg, min, sec, mas] = value;
+            let deg = i8::try_from(deg).map_err(|_| AngleNotInRange::Degrees)?;
             let min = u8::try_from(min).map_err(|_| AngleNotInRange::ArcMinutes)?;
             let sec = u8::try_from(sec).map_err(|_| AngleNotInRange::ArcSeconds)?;
             let mas = u16::try_from(mas).map_err(|_| AngleNotInRange::ArcMilliSeconds)?;
@@ -201,7 +203,7 @@ mod partial_try_from {
     }
 }
 
-try_from_tuples_and_arrays!((i16, u8, u8, u16; max=i16) -> <Latitude<A> where A: Angle, NumErr>);
+try_from_tuples_and_arrays!((i8, u8, u8, u16; max=i16) -> <Latitude<A> where A: Angle, NumErr>);
 
 impl<A: Angle> Add<A> for Latitude<A> {
     type Output = Result<Self, A::NumErr>;
