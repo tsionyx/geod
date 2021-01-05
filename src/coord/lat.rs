@@ -170,7 +170,7 @@ where
 }
 
 mod partial_try_from {
-    use std::convert::{TryFrom, TryInto};
+    use std::convert::TryFrom;
 
     use crate::angle::{dd::DecimalDegree, dms_dd::AccurateDegree, AngleNotInRange};
 
@@ -181,11 +181,9 @@ mod partial_try_from {
 
         fn try_from(value: [i16; 4]) -> Result<Self, Self::Error> {
             let [deg, min, sec, centi] = value;
-            let min = min.try_into().map_err(|_| AngleNotInRange::ArcMinutes)?;
-            let sec = sec.try_into().map_err(|_| AngleNotInRange::ArcSeconds)?;
-            let centi: u8 = centi
-                .try_into()
-                .map_err(|_| AngleNotInRange::ArcCentiSeconds)?;
+            let min = u8::try_from(min).map_err(|_| AngleNotInRange::ArcMinutes)?;
+            let sec = u8::try_from(sec).map_err(|_| AngleNotInRange::ArcSeconds)?;
+            let centi = u8::try_from(centi).map_err(|_| AngleNotInRange::ArcCentiSeconds)?;
             Self::try_from((deg, min, sec, u16::from(centi)))
         }
     }
@@ -195,11 +193,9 @@ mod partial_try_from {
 
         fn try_from(value: [i16; 4]) -> Result<Self, Self::Error> {
             let [deg, min, sec, mas] = value;
-            let min: u8 = min.try_into().map_err(|_| AngleNotInRange::ArcMinutes)?;
-            let sec: u8 = sec.try_into().map_err(|_| AngleNotInRange::ArcSeconds)?;
-            let mas: u16 = mas
-                .try_into()
-                .map_err(|_| AngleNotInRange::ArcMilliSeconds)?;
+            let min = u8::try_from(min).map_err(|_| AngleNotInRange::ArcMinutes)?;
+            let sec = u8::try_from(sec).map_err(|_| AngleNotInRange::ArcSeconds)?;
+            let mas = u16::try_from(mas).map_err(|_| AngleNotInRange::ArcMilliSeconds)?;
             Self::try_from((deg, min, sec, mas))
         }
     }

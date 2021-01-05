@@ -109,7 +109,7 @@ impl DecimalDegree {
         }
 
         let units = u64::from(degrees) * u64::from(max_fraction_units) + u64::from(fraction);
-        let units = units.try_into().map_err(|_err| AngleNotInRange::Degrees)?;
+        let units = u32::try_from(units).map_err(|_| AngleNotInRange::Degrees)?;
         Ok(Self { units })
     }
 
@@ -140,9 +140,7 @@ impl DecimalDegree {
         let denom = Self::mas_in_deg();
 
         let as_units = (u64::from(total_mas) * u64::from(num)).div_round(u64::from(denom));
-        let fraction = as_units
-            .try_into()
-            .map_err(|_| AngleNotInRange::ArcMinutes)?;
+        let fraction = u32::try_from(as_units).map_err(|_| AngleNotInRange::ArcMinutes)?;
         Self::with_deg_and_fraction(degree, fraction)
     }
 
@@ -307,8 +305,8 @@ impl TryFrom<[u16; 4]> for DecimalDegree {
 
     fn try_from(value: [u16; 4]) -> Result<Self, Self::Error> {
         let [deg, min, sec, mas] = value;
-        let min: u8 = min.try_into().map_err(|_| AngleNotInRange::ArcMinutes)?;
-        let sec: u8 = sec.try_into().map_err(|_| AngleNotInRange::ArcSeconds)?;
+        let min = u8::try_from(min).map_err(|_| AngleNotInRange::ArcMinutes)?;
+        let sec = u8::try_from(sec).map_err(|_| AngleNotInRange::ArcSeconds)?;
         Self::with_dms(deg, min, sec, mas)
     }
 }

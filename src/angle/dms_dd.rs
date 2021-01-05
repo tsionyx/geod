@@ -142,7 +142,7 @@ impl AccurateDegree {
         }
 
         let total_micro = u64::from(degrees) * u64::from(max_fraction_units) + u64::from(fraction);
-        let total_micro = u32::try_from(total_micro).map_err(|_err| AngleNotInRange::Degrees)?;
+        let total_micro = u32::try_from(total_micro).map_err(|_| AngleNotInRange::Degrees)?;
 
         let units = Self::micro_deg_to_unit_coef() * total_micro;
         Ok(Self { units })
@@ -172,7 +172,7 @@ impl AccurateDegree {
         let total_seconds = (total_minutes * sec_in_min) + u64::from(seconds);
         let total_cas = (total_seconds * centi) + u64::from(centi_seconds);
 
-        let total_cas = u32::try_from(total_cas).map_err(|_err| AngleNotInRange::Degrees)?;
+        let total_cas = u32::try_from(total_cas).map_err(|_| AngleNotInRange::Degrees)?;
         Self::with_units(Self::cas_to_unit_coef() * total_cas)
     }
 
@@ -340,11 +340,9 @@ impl TryFrom<[u16; 4]> for AccurateDegree {
 
     fn try_from(value: [u16; 4]) -> Result<Self, Self::Error> {
         let [deg, min, sec, centi] = value;
-        let min = min.try_into().map_err(|_| AngleNotInRange::ArcMinutes)?;
-        let sec = sec.try_into().map_err(|_| AngleNotInRange::ArcSeconds)?;
-        let centi = centi
-            .try_into()
-            .map_err(|_| AngleNotInRange::ArcCentiSeconds)?;
+        let min = u8::try_from(min).map_err(|_| AngleNotInRange::ArcMinutes)?;
+        let sec = u8::try_from(sec).map_err(|_| AngleNotInRange::ArcSeconds)?;
+        let centi = u8::try_from(centi).map_err(|_| AngleNotInRange::ArcCentiSeconds)?;
         Self::with_dms(deg, min, sec, centi)
     }
 }
