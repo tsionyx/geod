@@ -347,7 +347,7 @@ impl TryFrom<[u16; 4]> for AccurateDegree {
     }
 }
 
-try_from_tuples_and_arrays!((AccurateDegree, AngleNotInRange) <- u16, u8, u8, u16; u16);
+try_from_tuples_and_arrays!((u16, u8, u8, u16; max=u16) -> <AccurateDegree, AngleNotInRange>);
 
 #[cfg(test)]
 mod tests {

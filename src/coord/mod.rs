@@ -200,7 +200,7 @@ macro_rules! bool_enum {
 
 #[doc(hidden)]
 #[macro_export]
-/// Allows to implement some `TryFrom` implementations for a type:
+/// Generate the following `TryFrom` implementations for a type:
 /// - TryFrom<T1>
 /// - TryFrom<(T1, T2)>
 /// - TryFrom<(T1, T2, T3)>
@@ -214,10 +214,16 @@ macro_rules! bool_enum {
 /// Missing parts are filled with 0-s.
 ///
 /// # Examples
-/// `try_from_tuples_and_arrays!((Point4D, CoordNotInRange) <- u16, u8, u8, u16; u16)`
-/// `try_from_tuples_and_arrays!((GenericPoint<A> where A: Angle, NumErr) <- i16, u8, u8, u16; i16)`
+///
+/// ```compile_fail
+/// try_from_tuples_and_arrays!((u16, u8, u8, u16; max=u16) ->
+///     <Point4D, CoordNotInRange>);
+///
+/// try_from_tuples_and_arrays!((i16, u8, u8, u16; max=i16) ->
+///     <GenericPoint<T> where T: Debug, CoordNotInRange>);
+/// ```
 macro_rules! try_from_tuples_and_arrays {
-    (($target:ty $(where $T:tt: $Trait:ident)?, $err: ident) <- $t1:ty, $t2:ty, $t3:ty, $t4:ty; $t_max:ty) => {
+    (($t1:ty, $t2:ty, $t3:ty, $t4:ty; max=$t_max:ty) -> <$target:ty $(where $T:tt: $Trait:ident)?, $err: ident>) => {
         impl$(<$T:$Trait>)? TryFrom<$t1> for $target
         $(where
             Self: TryFrom<($t1, $t2, $t3, $t4), Error = <$T as $Trait>::$err>,

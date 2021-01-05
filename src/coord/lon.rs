@@ -253,7 +253,7 @@ mod partial_try_from {
     }
 }
 
-try_from_tuples_and_arrays!((Longitude<A> where A: Angle, NumErr) <- i16, u8, u8, u16; i16);
+try_from_tuples_and_arrays!((i16, u8, u8, u16; max=i16) -> <Longitude<A> where A: Angle, NumErr>);
 
 impl<A: Angle> Add<A> for Longitude<A> {
     type Output = Self;

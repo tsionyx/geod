@@ -311,7 +311,7 @@ impl TryFrom<[u16; 4]> for DecimalDegree {
     }
 }
 
-try_from_tuples_and_arrays!((DecimalDegree, AngleNotInRange) <- u16, u8, u8, u16; u16);
+try_from_tuples_and_arrays!((u16, u8, u8, u16; max=u16) -> <DecimalDegree, AngleNotInRange>);
 
 #[cfg(test)]
 mod tests {
