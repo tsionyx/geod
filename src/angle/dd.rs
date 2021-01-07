@@ -155,14 +155,12 @@ impl DecimalDegree {
             return Err(AngleNotInRange::Degrees);
         }
 
+        #[allow(clippy::cast_possible_truncation)]
+        let thousand = Self::THOUSAND as u16;
         let (valid_minutes, valid_seconds, valid_milli) = if degree == MAX_DEGREE {
             (0..1, 0..1, 0..1)
         } else {
-            (
-                0..MINUTES_IN_DEGREE,
-                0..SECONDS_IN_MINUTE,
-                0..(Self::THOUSAND as u16),
-            )
+            (0..MINUTES_IN_DEGREE, 0..SECONDS_IN_MINUTE, 0..thousand)
         };
 
         if !valid_minutes.contains(&minutes) {
@@ -181,9 +179,9 @@ impl DecimalDegree {
     }
 
     /// The whole number of degrees in the angle
-    pub const fn degrees(self) -> u16 {
+    pub fn degrees(self) -> u16 {
         let degrees = self.units / Self::units_in_deg();
-        degrees as u16
+        degrees.try_into().expect("Degree value is too big for u16")
     }
 
     /// The fractional part of the angle represented in the small units (10<sup>-7</sup> degrees)

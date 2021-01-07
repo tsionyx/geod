@@ -187,14 +187,12 @@ impl AccurateDegree {
             return Err(AngleNotInRange::Degrees);
         }
 
+        #[allow(clippy::cast_possible_truncation)]
+        let hundred = Self::HUNDRED as u8;
         let (valid_minutes, valid_seconds, valid_centi) = if degree == MAX_DEGREE {
             (0..1, 0..1, 0..1)
         } else {
-            (
-                0..MINUTES_IN_DEGREE,
-                0..SECONDS_IN_MINUTE,
-                0..(Self::HUNDRED as u8),
-            )
+            (0..MINUTES_IN_DEGREE, 0..SECONDS_IN_MINUTE, 0..hundred)
         };
 
         if !valid_minutes.contains(&minutes) {
@@ -213,9 +211,9 @@ impl AccurateDegree {
     }
 
     /// The whole number of degrees in the angle
-    pub const fn degrees(self) -> u16 {
+    pub fn degrees(self) -> u16 {
         let degrees = self.units / Self::units_in_deg();
-        degrees as u16
+        degrees.try_into().expect("Degree value is too big for u16")
     }
 
     /// The microdegrees (10<sup>-6</sup> degrees) component of the angle
