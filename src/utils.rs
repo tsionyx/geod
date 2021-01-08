@@ -1,6 +1,10 @@
 //! Utilities functions which do not linked to domain
 
-use std::ops::{Div, Neg, Rem};
+use std::{
+    convert::TryInto,
+    num::TryFromIntError,
+    ops::{Div, Neg, Rem},
+};
 
 #[doc(hidden)]
 #[macro_export]
@@ -152,6 +156,16 @@ const POW_10: [u32; 10] = [
 /// The powers of 10
 pub const fn pow_10(pow: usize) -> u32 {
     POW_10[pow]
+}
+
+/// Ignores the `TryFromIntError` appeared during
+/// integral types conversions, transforming it into `None`
+/// as there is no semantic information in this error anyway.
+pub fn convert_int<T, U>(value: T) -> Option<U>
+where
+    T: TryInto<U, Error = TryFromIntError>,
+{
+    value.try_into().ok()
 }
 
 #[cfg(test)]

@@ -23,7 +23,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     impl_angle_ops, impl_angle_traits, impl_conv_traits, try_from_tuples_and_arrays,
-    utils::{div_mod, pow_10, RoundDiv, StripChar},
+    utils::{convert_int, div_mod, pow_10, RoundDiv, StripChar},
 };
 
 use super::{
@@ -142,7 +142,7 @@ impl AccurateDegree {
         }
 
         let total_micro = u64::from(degrees) * u64::from(max_fraction_units) + u64::from(fraction);
-        let total_micro = u32::try_from(total_micro).map_err(|_| AngleNotInRange::Degrees)?;
+        let total_micro: u32 = convert_int(total_micro).ok_or(AngleNotInRange::Degrees)?;
 
         let units = Self::micro_deg_to_unit_coef() * total_micro;
         Ok(Self { units })
@@ -172,7 +172,7 @@ impl AccurateDegree {
         let total_seconds = (total_minutes * sec_in_min) + u64::from(seconds);
         let total_cas = (total_seconds * centi) + u64::from(centi_seconds);
 
-        let total_cas = u32::try_from(total_cas).map_err(|_| AngleNotInRange::Degrees)?;
+        let total_cas: u32 = convert_int(total_cas).ok_or(AngleNotInRange::Degrees)?;
         Self::with_units(Self::cas_to_unit_coef() * total_cas)
     }
 
@@ -325,10 +325,10 @@ impl TryFrom<(u16, u8, u8, u16)> for AccurateDegree {
 
     fn try_from(value: (u16, u8, u8, u16)) -> Result<Self, Self::Error> {
         let (deg, min, sec, centi) = value;
-        // Why not `u8` for the first? It is a workaround to allow to construct coordinates.
-        let centi = centi
-            .try_into()
-            .map_err(|_| AngleNotInRange::ArcCentiSeconds)?;
+        // Why not have `centi: u8` right in the signature?
+        // It is a workaround to allow to construct coordinates later
+        // from a quadruples (u16, u8, u8, u16)
+        let centi = convert_int(centi).ok_or(AngleNotInRange::ArcCentiSeconds)?;
         Self::with_dms(deg, min, sec, centi)
     }
 }
@@ -338,9 +338,9 @@ impl TryFrom<[u16; 4]> for AccurateDegree {
 
     fn try_from(value: [u16; 4]) -> Result<Self, Self::Error> {
         let [deg, min, sec, centi] = value;
-        let min = u8::try_from(min).map_err(|_| AngleNotInRange::ArcMinutes)?;
-        let sec = u8::try_from(sec).map_err(|_| AngleNotInRange::ArcSeconds)?;
-        let centi = u8::try_from(centi).map_err(|_| AngleNotInRange::ArcCentiSeconds)?;
+        let min = convert_int(min).ok_or(AngleNotInRange::ArcMinutes)?;
+        let sec = convert_int(sec).ok_or(AngleNotInRange::ArcSeconds)?;
+        let centi = convert_int(centi).ok_or(AngleNotInRange::ArcCentiSeconds)?;
         Self::with_dms(deg, min, sec, centi)
     }
 }

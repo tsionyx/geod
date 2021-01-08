@@ -176,7 +176,10 @@ where
 mod partial_try_from {
     use std::convert::TryFrom;
 
-    use crate::angle::{dd::DecimalDegree, dms_dd::AccurateDegree, AngleNotInRange};
+    use crate::{
+        angle::{dd::DecimalDegree, dms_dd::AccurateDegree, AngleNotInRange},
+        utils::convert_int,
+    };
 
     use super::{Angle, Latitude};
 
@@ -185,10 +188,10 @@ mod partial_try_from {
 
         fn try_from(value: [i16; 4]) -> Result<Self, Self::Error> {
             let [deg, min, sec, centi] = value;
-            let deg = i8::try_from(deg).map_err(|_| AngleNotInRange::Degrees)?;
-            let min = u8::try_from(min).map_err(|_| AngleNotInRange::ArcMinutes)?;
-            let sec = u8::try_from(sec).map_err(|_| AngleNotInRange::ArcSeconds)?;
-            let centi = u8::try_from(centi).map_err(|_| AngleNotInRange::ArcCentiSeconds)?;
+            let deg = convert_int(deg).ok_or(AngleNotInRange::Degrees)?;
+            let min = convert_int(min).ok_or(AngleNotInRange::ArcMinutes)?;
+            let sec = convert_int(sec).ok_or(AngleNotInRange::ArcSeconds)?;
+            let centi: u8 = convert_int(centi).ok_or(AngleNotInRange::ArcCentiSeconds)?;
             Self::try_from((deg, min, sec, u16::from(centi)))
         }
     }
@@ -198,10 +201,10 @@ mod partial_try_from {
 
         fn try_from(value: [i16; 4]) -> Result<Self, Self::Error> {
             let [deg, min, sec, mas] = value;
-            let deg = i8::try_from(deg).map_err(|_| AngleNotInRange::Degrees)?;
-            let min = u8::try_from(min).map_err(|_| AngleNotInRange::ArcMinutes)?;
-            let sec = u8::try_from(sec).map_err(|_| AngleNotInRange::ArcSeconds)?;
-            let mas = u16::try_from(mas).map_err(|_| AngleNotInRange::ArcMilliSeconds)?;
+            let deg = convert_int(deg).ok_or(AngleNotInRange::Degrees)?;
+            let min = convert_int(min).ok_or(AngleNotInRange::ArcMinutes)?;
+            let sec = convert_int(sec).ok_or(AngleNotInRange::ArcSeconds)?;
+            let mas = convert_int(mas).ok_or(AngleNotInRange::ArcMilliSeconds)?;
             Self::try_from((deg, min, sec, mas))
         }
     }

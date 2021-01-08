@@ -24,7 +24,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     impl_angle_ops, impl_angle_traits, impl_conv_traits, try_from_tuples_and_arrays,
-    utils::{div_mod, pow_10, RoundDiv, StripChar},
+    utils::{convert_int, div_mod, pow_10, RoundDiv, StripChar},
 };
 
 use super::{
@@ -109,7 +109,7 @@ impl DecimalDegree {
         }
 
         let units = u64::from(degrees) * u64::from(max_fraction_units) + u64::from(fraction);
-        let units = u32::try_from(units).map_err(|_| AngleNotInRange::Degrees)?;
+        let units = convert_int(units).ok_or(AngleNotInRange::Degrees)?;
         Ok(Self { units })
     }
 
@@ -140,7 +140,7 @@ impl DecimalDegree {
         let denom = Self::mas_in_deg();
 
         let as_units = (u64::from(total_mas) * u64::from(num)).div_round(u64::from(denom));
-        let fraction = u32::try_from(as_units).map_err(|_| AngleNotInRange::ArcMinutes)?;
+        let fraction = convert_int(as_units).ok_or(AngleNotInRange::ArcMinutes)?;
         Self::with_deg_and_fraction(degree, fraction)
     }
 
@@ -303,8 +303,8 @@ impl TryFrom<[u16; 4]> for DecimalDegree {
 
     fn try_from(value: [u16; 4]) -> Result<Self, Self::Error> {
         let [deg, min, sec, mas] = value;
-        let min = u8::try_from(min).map_err(|_| AngleNotInRange::ArcMinutes)?;
-        let sec = u8::try_from(sec).map_err(|_| AngleNotInRange::ArcSeconds)?;
+        let min = convert_int(min).ok_or(AngleNotInRange::ArcMinutes)?;
+        let sec = convert_int(sec).ok_or(AngleNotInRange::ArcSeconds)?;
         Self::with_dms(deg, min, sec, mas)
     }
 }
