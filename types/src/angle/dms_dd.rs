@@ -349,7 +349,7 @@ try_from_tuples_and_arrays!((u16, u8, u8, u16; max=u16) -> <AccurateDegree, Angl
 
 #[cfg(test)]
 mod tests {
-    use std::{f64, mem::size_of};
+    use std::mem::size_of;
 
     use super::*;
 

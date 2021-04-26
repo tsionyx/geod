@@ -313,7 +313,7 @@ try_from_tuples_and_arrays!((u16, u8, u8, u16; max=u16) -> <DecimalDegree, Angle
 
 #[cfg(test)]
 mod tests {
-    use std::{f64, mem::size_of};
+    use std::mem::size_of;
 
     use super::*;
 

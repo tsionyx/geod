@@ -100,11 +100,11 @@ macro_rules! impl_conv_traits {
             }
         }
 
-        impl Into<f64> for $t {
-            fn into(self) -> f64 {
-                let degrees = f64::from(self.degrees());
+        impl From<$t> for f64 {
+            fn from(deg: $t) -> Self {
+                let degrees = Self::from(deg.degrees());
                 let fract =
-                    f64::from(self.deg_fract()) / f64::from(Self::$fraction_multiplier_func());
+                    Self::from(deg.deg_fract()) / Self::from(<$t>::$fraction_multiplier_func());
                 degrees + fract
             }
         }

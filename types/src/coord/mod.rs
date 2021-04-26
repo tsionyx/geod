@@ -71,7 +71,7 @@ where
         direction: Self::Direction,
     ) -> Result<Self, A::ParseErr> {
         let angle = angle_str.parse()?;
-        Ok(Self::with_angle_and_direction(angle, direction).map_err(Into::into)?)
+        Self::with_angle_and_direction(angle, direction).map_err(A::NumErr::into)
     }
 
     fn parse(s: &str) -> Result<Self, ParseCoordinateError<A::ParseErr>>
