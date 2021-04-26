@@ -81,13 +81,13 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --all-features --all
+          args: --all-features --workspace
 
       - name: Run cargo test (ignored)
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --all-features --all -- --ignored
+          args: --all-features --workspace -- --ignored
 
   clippy:
     name: Clippy on rust '${{ matrix.rust }}'
@@ -133,4 +133,4 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --all-targets --all-features --all -- -Dwarnings -W clippy::nursery -W clippy::pedantic
+          args: --all-targets --all-features --workspace -- -Dwarnings -W clippy::nursery -W clippy::pedantic
