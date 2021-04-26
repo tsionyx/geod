@@ -17,7 +17,10 @@ jobs:
     strategy:
       matrix:
         rust:
+          - 1.43.0
           - stable
+          - beta
+          - nightly-2021-04-25
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
@@ -43,8 +46,10 @@ jobs:
     strategy:
       matrix:
         rust:
-          - stable
           - 1.43.0
+          - stable
+          - beta
+          - nightly
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
@@ -90,7 +95,10 @@ jobs:
     strategy:
       matrix:
         rust:
+          - 1.43.0
           - stable
+          - beta
+          - nightly
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
