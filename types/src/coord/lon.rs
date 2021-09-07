@@ -43,7 +43,7 @@ impl<A: Angle> Longitude<A> {
     {
         to_angle
             .try_into()
-            .and_then(|angle| Self::with_angle_and_direction(angle, East))
+            .and_then(|angle| Self::from_angle_and_direction(angle, East))
     }
 
     /// Construct a western longitude with some numeric information.
@@ -58,7 +58,7 @@ impl<A: Angle> Longitude<A> {
     {
         to_angle
             .try_into()
-            .and_then(|angle| Self::with_angle_and_direction(angle, West))
+            .and_then(|angle| Self::from_angle_and_direction(angle, West))
     }
 
     /// The chosen by convention [0-meridian](https://en.wikipedia.org/wiki/Prime_meridian)
@@ -158,7 +158,7 @@ impl<A: Angle> Default for Longitude<A> {
 impl<A: Angle> AngleAndDirection<A> for Longitude<A> {
     type Direction = RotationalDirection;
 
-    fn with_angle_and_direction(angle: A, direction: Self::Direction) -> Result<Self, A::NumErr> {
+    fn from_angle_and_direction(angle: A, direction: Self::Direction) -> Result<Self, A::NumErr> {
         let angle = angle.and_not_reflex()?;
 
         let angle = match direction {
@@ -174,7 +174,7 @@ where
     A: Angle + FromStr<Err = <A as Angle>::ParseErr>,
     A::ParseErr: From<A::NumErr>,
 {
-    fn with_angle_only(angle: A) -> Option<Self> {
+    fn from_angle_alone(angle: A) -> Option<Self> {
         if angle.is_zero() {
             Some(Self::prime())
         } else if angle.is_straight() {
@@ -199,7 +199,7 @@ impl<A: Angle> TryFrom<f64> for Longitude<A> {
     fn try_from(value: f64) -> Result<Self, Self::Error> {
         let (value, is_east) = value.abs_and_sign();
         let angle = value.try_into()?;
-        Self::with_angle_and_direction(angle, is_east.into())
+        Self::from_angle_and_direction(angle, is_east.into())
     }
 }
 
@@ -215,7 +215,7 @@ where
         let (deg, is_east) = deg.abs_and_sign();
         let angle = (deg, min, sec, milli).try_into()?;
 
-        Self::with_angle_and_direction(angle, is_east.into())
+        Self::from_angle_and_direction(angle, is_east.into())
     }
 }
 
@@ -340,8 +340,8 @@ mod tests_accur {
         let deg_75 = -(Longitude::west((75, 43, 21, 18)).unwrap());
         let deg_90 = [90, 20].try_into().unwrap();
         let deg_130 = 130.try_into().unwrap();
-        let deg_160_1 = Longitude::with_angle_and_direction(
-            AccurateDegree::with_dms(160, 15, 1, 84).unwrap(),
+        let deg_160_1 = Longitude::from_angle_and_direction(
+            AccurateDegree::from_dms(160, 15, 1, 84).unwrap(),
             East,
         )
         .unwrap();
@@ -442,13 +442,13 @@ mod tests_accur {
         let prime = Longitude::prime();
         let prime1 = Longitude::east(0).unwrap();
         let prime2 = Longitude::west(0).unwrap();
-        let prime3 = Longitude::with_angle_only(AccurateDegree::zero()).unwrap();
-        let prime4 = Longitude::with_angle_and_direction(
-            AccurateDegree::with_dms(0, 0, 0, 0).unwrap(),
+        let prime3 = Longitude::from_angle_alone(AccurateDegree::zero()).unwrap();
+        let prime4 = Longitude::from_angle_and_direction(
+            AccurateDegree::from_dms(0, 0, 0, 0).unwrap(),
             East,
         )
         .unwrap();
-        let prime5 = Longitude::with_angle_and_direction(AccurateDegree::complete(), West).unwrap();
+        let prime5 = Longitude::from_angle_and_direction(AccurateDegree::complete(), West).unwrap();
         let prime6 = Longitude::anti_meridian().opposite();
 
         assert_eq!(prime, prime1);
@@ -465,9 +465,9 @@ mod tests_accur {
         let anti = Longitude::anti_meridian();
         let anti1 = Longitude::east(180).unwrap();
         let anti2 = Longitude::west(180.0).unwrap();
-        let anti3 = Longitude::with_angle_and_direction(AccurateDegree::straight(), East).unwrap();
-        let anti4 = Longitude::with_angle_and_direction(AccurateDegree::straight(), West).unwrap();
-        let anti5 = Longitude::with_angle_only(AccurateDegree::straight()).unwrap();
+        let anti3 = Longitude::from_angle_and_direction(AccurateDegree::straight(), East).unwrap();
+        let anti4 = Longitude::from_angle_and_direction(AccurateDegree::straight(), West).unwrap();
+        let anti5 = Longitude::from_angle_alone(AccurateDegree::straight()).unwrap();
 
         assert_eq!(anti, anti1);
         assert_eq!(anti1, anti2);
@@ -531,7 +531,7 @@ mod tests_accur {
         assert_eq!(l.direction(), Some(East));
         assert!(l
             .angle()
-            .almost_equal(AccurateDegree::with_dms(41, 37, 21, 4).unwrap()));
+            .almost_equal(AccurateDegree::from_dms(41, 37, 21, 4).unwrap()));
     }
 
     #[test]
@@ -540,7 +540,7 @@ mod tests_accur {
         assert_eq!(l.direction(), Some(West));
         assert!(l
             .angle()
-            .almost_equal(AccurateDegree::with_dms(84, 7, 13, 64).unwrap()));
+            .almost_equal(AccurateDegree::from_dms(84, 7, 13, 64).unwrap()));
     }
 
     #[test]
@@ -581,7 +581,7 @@ mod parse_tests_accur {
         assert_eq!(l_ascii, l);
 
         assert_eq!(l.direction(), Some(East));
-        assert_eq!(l.angle(), AccurateDegree::with_dms(34, 16, 22, 0).unwrap());
+        assert_eq!(l.angle(), AccurateDegree::from_dms(34, 16, 22, 0).unwrap());
     }
 
     #[test]
@@ -591,7 +591,7 @@ mod parse_tests_accur {
         assert_eq!(l_ascii, l);
 
         assert_eq!(l.direction(), Some(West));
-        assert_eq!(l.angle(), AccurateDegree::with_dms(43, 20, 7, 15).unwrap());
+        assert_eq!(l.angle(), AccurateDegree::from_dms(43, 20, 7, 15).unwrap());
     }
 
     #[test]
@@ -611,7 +611,7 @@ mod parse_tests_accur {
         assert_eq!(l_ascii, l);
 
         assert_eq!(l.direction(), Some(East));
-        assert_eq!(l.angle(), AccurateDegree::with_dms(34, 16, 0, 0).unwrap());
+        assert_eq!(l.angle(), AccurateDegree::from_dms(34, 16, 0, 0).unwrap());
     }
 
     #[test]
@@ -621,7 +621,7 @@ mod parse_tests_accur {
         assert_eq!(l_ascii, l);
 
         assert_eq!(l.direction(), Some(West));
-        assert_eq!(l.angle(), AccurateDegree::with_dms(89, 0, 2, 44).unwrap());
+        assert_eq!(l.angle(), AccurateDegree::from_dms(89, 0, 2, 44).unwrap());
     }
 
     #[test]
@@ -641,7 +641,7 @@ mod parse_tests_accur {
         assert_eq!(l_ascii, l);
 
         assert_eq!(l.direction(), Some(East));
-        assert_eq!(l.angle(), AccurateDegree::with_dms(34, 16, 0, 0).unwrap());
+        assert_eq!(l.angle(), AccurateDegree::from_dms(34, 16, 0, 0).unwrap());
     }
 
     #[test]
@@ -651,7 +651,7 @@ mod parse_tests_accur {
         assert_eq!(l_ascii, l);
 
         assert_eq!(l.direction(), Some(West));
-        assert_eq!(l.angle(), AccurateDegree::with_dms(89, 0, 2, 44).unwrap());
+        assert_eq!(l.angle(), AccurateDegree::from_dms(89, 0, 2, 44).unwrap());
     }
 
     #[test]
@@ -768,8 +768,8 @@ mod tests_dec {
         let deg_75 = -(Longitude::west((75, 43, 21, 183)).unwrap());
         let deg_90 = [90, 20].try_into().unwrap();
         let deg_130 = 130.try_into().unwrap();
-        let deg_160_1 = Longitude::with_angle_and_direction(
-            DecimalDegree::with_dms(160, 15, 1, 845).unwrap(),
+        let deg_160_1 = Longitude::from_angle_and_direction(
+            DecimalDegree::from_dms(160, 15, 1, 845).unwrap(),
             East,
         )
         .unwrap();
@@ -870,11 +870,11 @@ mod tests_dec {
         let prime = Longitude::prime();
         let prime1 = Longitude::east(0).unwrap();
         let prime2 = Longitude::west(0).unwrap();
-        let prime3 = Longitude::with_angle_only(DecimalDegree::zero()).unwrap();
+        let prime3 = Longitude::from_angle_alone(DecimalDegree::zero()).unwrap();
         let prime4 =
-            Longitude::with_angle_and_direction(DecimalDegree::with_dms(0, 0, 0, 0).unwrap(), East)
+            Longitude::from_angle_and_direction(DecimalDegree::from_dms(0, 0, 0, 0).unwrap(), East)
                 .unwrap();
-        let prime5 = Longitude::with_angle_and_direction(DecimalDegree::complete(), West).unwrap();
+        let prime5 = Longitude::from_angle_and_direction(DecimalDegree::complete(), West).unwrap();
         let prime6 = Longitude::anti_meridian().opposite();
 
         assert_eq!(prime, prime1);
@@ -891,9 +891,9 @@ mod tests_dec {
         let anti = Longitude::anti_meridian();
         let anti1 = Longitude::east(180).unwrap();
         let anti2 = Longitude::west(180.0).unwrap();
-        let anti3 = Longitude::with_angle_and_direction(DecimalDegree::straight(), East).unwrap();
-        let anti4 = Longitude::with_angle_and_direction(DecimalDegree::straight(), West).unwrap();
-        let anti5 = Longitude::with_angle_only(DecimalDegree::straight()).unwrap();
+        let anti3 = Longitude::from_angle_and_direction(DecimalDegree::straight(), East).unwrap();
+        let anti4 = Longitude::from_angle_and_direction(DecimalDegree::straight(), West).unwrap();
+        let anti5 = Longitude::from_angle_alone(DecimalDegree::straight()).unwrap();
 
         assert_eq!(anti, anti1);
         assert_eq!(anti1, anti2);
@@ -957,7 +957,7 @@ mod tests_dec {
         assert_eq!(l.direction(), Some(East));
         assert!(l
             .angle()
-            .almost_equal(DecimalDegree::with_dms(41, 37, 21, 43).unwrap()));
+            .almost_equal(DecimalDegree::from_dms(41, 37, 21, 43).unwrap()));
     }
 
     #[test]
@@ -966,7 +966,7 @@ mod tests_dec {
         assert_eq!(l.direction(), Some(West));
         assert!(l
             .angle()
-            .almost_equal(DecimalDegree::with_dms(84, 7, 13, 642).unwrap()));
+            .almost_equal(DecimalDegree::from_dms(84, 7, 13, 642).unwrap()));
     }
 
     #[test]
@@ -1007,7 +1007,7 @@ mod parse_tests_dec {
         assert_eq!(l_ascii, l);
 
         assert_eq!(l.direction(), Some(East));
-        assert_eq!(l.angle(), DecimalDegree::with_dms(34, 16, 22, 0).unwrap());
+        assert_eq!(l.angle(), DecimalDegree::from_dms(34, 16, 22, 0).unwrap());
     }
 
     #[test]
@@ -1017,7 +1017,7 @@ mod parse_tests_dec {
         assert_eq!(l_ascii, l);
 
         assert_eq!(l.direction(), Some(West));
-        assert_eq!(l.angle(), DecimalDegree::with_dms(43, 20, 7, 150).unwrap());
+        assert_eq!(l.angle(), DecimalDegree::from_dms(43, 20, 7, 150).unwrap());
     }
 
     #[test]
@@ -1037,7 +1037,7 @@ mod parse_tests_dec {
         assert_eq!(l_ascii, l);
 
         assert_eq!(l.direction(), Some(East));
-        assert_eq!(l.angle(), DecimalDegree::with_dms(34, 16, 0, 0).unwrap());
+        assert_eq!(l.angle(), DecimalDegree::from_dms(34, 16, 0, 0).unwrap());
     }
 
     #[test]
@@ -1047,7 +1047,7 @@ mod parse_tests_dec {
         assert_eq!(l_ascii, l);
 
         assert_eq!(l.direction(), Some(West));
-        assert_eq!(l.angle(), DecimalDegree::with_dms(89, 0, 2, 440).unwrap());
+        assert_eq!(l.angle(), DecimalDegree::from_dms(89, 0, 2, 440).unwrap());
     }
 
     #[test]
@@ -1067,7 +1067,7 @@ mod parse_tests_dec {
         assert_eq!(l_ascii, l);
 
         assert_eq!(l.direction(), Some(East));
-        assert_eq!(l.angle(), DecimalDegree::with_dms(34, 16, 0, 0).unwrap());
+        assert_eq!(l.angle(), DecimalDegree::from_dms(34, 16, 0, 0).unwrap());
     }
 
     #[test]
@@ -1077,7 +1077,7 @@ mod parse_tests_dec {
         assert_eq!(l_ascii, l);
 
         assert_eq!(l.direction(), Some(West));
-        assert_eq!(l.angle(), DecimalDegree::with_dms(89, 0, 2, 440).unwrap());
+        assert_eq!(l.angle(), DecimalDegree::from_dms(89, 0, 2, 440).unwrap());
     }
 
     #[test]
@@ -1188,7 +1188,7 @@ mod arith_tests {
         assert_eq!(l2.direction(), Some(East));
         assert_eq!(
             l2.angle(),
-            AccurateDegree::with_dms(178, 18, 50, 0).unwrap()
+            AccurateDegree::from_dms(178, 18, 50, 0).unwrap()
         );
     }
 
@@ -1200,7 +1200,7 @@ mod arith_tests {
         let move_east = (47, 16, 5).try_into().unwrap();
         let l2 = l + move_east;
         assert_eq!(l2.direction(), Some(East));
-        assert_eq!(l2.angle(), DecimalDegree::with_dms(12, 4, 5, 0).unwrap());
+        assert_eq!(l2.angle(), DecimalDegree::from_dms(12, 4, 5, 0).unwrap());
     }
 
     #[test]
@@ -1213,7 +1213,7 @@ mod arith_tests {
         assert_eq!(l2.direction(), Some(West));
         assert_eq!(
             l2.angle(),
-            AccurateDegree::with_dms(156, 11, 27, 0).unwrap()
+            AccurateDegree::from_dms(156, 11, 27, 0).unwrap()
         );
     }
 
@@ -1235,7 +1235,7 @@ mod arith_tests {
 
         let l2: Longitude<_> = l - move_west;
         assert_eq!(l2.direction(), Some(East));
-        assert_eq!(l2.angle(), AccurateDegree::with_dms(62, 13, 20, 0).unwrap());
+        assert_eq!(l2.angle(), AccurateDegree::from_dms(62, 13, 20, 0).unwrap());
     }
 
     #[test]
@@ -1246,7 +1246,7 @@ mod arith_tests {
         let move_west: DecimalDegree = (47, 16, 5).try_into().unwrap();
         let l2: Longitude<_> = l - move_west;
         assert_eq!(l2.direction(), Some(West));
-        assert_eq!(l2.angle(), DecimalDegree::with_dms(12, 4, 5, 0).unwrap());
+        assert_eq!(l2.angle(), DecimalDegree::from_dms(12, 4, 5, 0).unwrap());
     }
 
     #[test]
@@ -1257,7 +1257,7 @@ mod arith_tests {
         let move_west = DecimalDegree::try_from((80, 6, 33)).unwrap();
         let l2: Longitude<_> = l - move_west;
         assert_eq!(l2.direction(), Some(East));
-        assert_eq!(l2.angle(), DecimalDegree::with_dms(156, 11, 27, 0).unwrap());
+        assert_eq!(l2.angle(), DecimalDegree::from_dms(156, 11, 27, 0).unwrap());
     }
 
     #[test]

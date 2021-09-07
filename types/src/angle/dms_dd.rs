@@ -47,7 +47,7 @@ pub struct AccurateDegree {
 impl UnitsAngle for AccurateDegree {
     type Units = u32;
 
-    fn with_units(units: u32) -> Result<Self, OutOfRange> {
+    fn from_units(units: u32) -> Result<Self, OutOfRange> {
         if units > Self::max_units() {
             return Err(OutOfRange::Degrees);
         }
@@ -123,7 +123,7 @@ impl AccurateDegree {
         quot
     }
 
-    fn with_deg_and_fraction(degrees: u16, fraction: u32) -> Result<Self, OutOfRange> {
+    fn from_deg_and_fraction(degrees: u16, fraction: u32) -> Result<Self, OutOfRange> {
         let valid_degrees = 0..=MAX_DEGREE;
         if !valid_degrees.contains(&degrees) {
             return Err(OutOfRange::Degrees);
@@ -155,7 +155,7 @@ impl AccurateDegree {
     /// # Errors
     /// When some part of the angle is out of scope
     /// (e.g. minutes > 60 or degree > 360), the `OutOfRange` returned.
-    pub fn with_dms(
+    pub fn from_dms(
         degree: u16,
         minutes: u8,
         seconds: u8,
@@ -173,7 +173,7 @@ impl AccurateDegree {
         let total_cas = (total_seconds * centi) + u64::from(centi_seconds);
 
         let total_cas: u32 = convert_int(total_cas).ok_or(OutOfRange::Degrees)?;
-        Self::with_units(Self::cas_to_unit_coef() * total_cas)
+        Self::from_units(Self::cas_to_unit_coef() * total_cas)
     }
 
     fn check_dms(
@@ -265,7 +265,7 @@ impl AccurateDegree {
             assert_eq!(cas, 0);
             if keep_degrees {
                 // subtract minimal DMS to prevent overflow in degrees
-                let min_dms = Self::with_dms(0, 0, 0, 1).expect("Min DMS is valid");
+                let min_dms = Self::from_dms(0, 0, 0, 1).expect("Min DMS is valid");
                 // `match_degrees=false` to prevent any possibility of the recursive call
                 return (self - min_dms).dms_parts(false);
             }
@@ -329,7 +329,7 @@ impl TryFrom<(u16, u8, u8, u16)> for AccurateDegree {
         // It is a workaround to allow to construct coordinates later
         // from a quadruples (u16, u8, u8, u16)
         let centi = convert_int(centi).ok_or(OutOfRange::ArcCentiSeconds)?;
-        Self::with_dms(deg, min, sec, centi)
+        Self::from_dms(deg, min, sec, centi)
     }
 }
 
@@ -341,7 +341,7 @@ impl TryFrom<[u16; 4]> for AccurateDegree {
         let min = convert_int(min).ok_or(OutOfRange::ArcMinutes)?;
         let sec = convert_int(sec).ok_or(OutOfRange::ArcSeconds)?;
         let centi = convert_int(centi).ok_or(OutOfRange::ArcCentiSeconds)?;
-        Self::with_dms(deg, min, sec, centi)
+        Self::from_dms(deg, min, sec, centi)
     }
 }
 
@@ -384,14 +384,14 @@ mod tests {
         assert_eq!(north_pole.arc_seconds(), 0);
         assert_eq!(north_pole.centi_arc_seconds(), 0);
 
-        let north_pole2: AccurateDegree = AccurateDegree::with_dms(180, 0, 0, 0).unwrap();
+        let north_pole2: AccurateDegree = AccurateDegree::from_dms(180, 0, 0, 0).unwrap();
         assert_eq!(north_pole2, north_pole);
     }
 
     /// <https://en.wikipedia.org/wiki/Tropic_of_Capricorn>
     #[test]
     fn intermediate() {
-        let polar_circle = AccurateDegree::with_deg_and_fraction(66, 563_334).unwrap();
+        let polar_circle = AccurateDegree::from_deg_and_fraction(66, 563_334).unwrap();
         assert!(polar_circle.is_acute());
         assert_eq!(polar_circle.degrees(), 66);
         assert_eq!(polar_circle.deg_fract(), 563_334);
@@ -405,7 +405,7 @@ mod tests {
 
     #[test]
     fn bigger_than_straight_is_valid() {
-        let angle = AccurateDegree::with_deg_and_fraction(200, 0).unwrap();
+        let angle = AccurateDegree::from_deg_and_fraction(200, 0).unwrap();
         assert!(angle.is_reflex());
         assert_eq!(angle.degrees(), 200);
         assert_eq!(angle.deg_fract(), 0);
@@ -419,7 +419,7 @@ mod tests {
 
     #[test]
     fn bigger_than_straight_dms() {
-        let angle = AccurateDegree::with_dms(181, 0, 2, 11).unwrap();
+        let angle = AccurateDegree::from_dms(181, 0, 2, 11).unwrap();
         assert!(angle.is_reflex());
         assert_eq!(angle.degrees(), 181);
 
@@ -431,42 +431,42 @@ mod tests {
     #[test]
     #[should_panic(expected = "Degrees")]
     fn bigger_than_complete() {
-        let _a = AccurateDegree::with_deg_and_fraction(365, 0).unwrap();
+        let _a = AccurateDegree::from_deg_and_fraction(365, 0).unwrap();
     }
 
     #[test]
     #[should_panic(expected = "Degrees")]
     fn bigger_than_complete_degree() {
-        let _a = AccurateDegree::with_dms(361, 0, 0, 0).unwrap();
+        let _a = AccurateDegree::from_dms(361, 0, 0, 0).unwrap();
     }
 
     #[test]
     #[should_panic(expected = "ArcMinutes")]
     fn bigger_than_complete_minute() {
-        let _a = AccurateDegree::with_dms(360, 5, 0, 0).unwrap();
+        let _a = AccurateDegree::from_dms(360, 5, 0, 0).unwrap();
     }
 
     #[test]
     #[should_panic(expected = "ArcSeconds")]
     fn bigger_than_complete_second() {
-        let _a = AccurateDegree::with_dms(360, 0, 2, 0).unwrap();
+        let _a = AccurateDegree::from_dms(360, 0, 2, 0).unwrap();
     }
 
     #[test]
     #[should_panic(expected = "ArcCentiSeconds")]
     fn bigger_than_complete_milli_second() {
-        let _a = AccurateDegree::with_dms(360, 0, 0, 1).unwrap();
+        let _a = AccurateDegree::from_dms(360, 0, 0, 1).unwrap();
     }
 
     #[test]
     #[should_panic(expected = "MicroDegrees")]
     fn bigger_than_complete_minimum_fraction() {
-        let _a = AccurateDegree::with_deg_and_fraction(360, 1).unwrap();
+        let _a = AccurateDegree::from_deg_and_fraction(360, 1).unwrap();
     }
 
     #[test]
     fn complete() {
-        let angle = AccurateDegree::with_deg_and_fraction(360, 0).unwrap();
+        let angle = AccurateDegree::from_deg_and_fraction(360, 0).unwrap();
         assert!(angle.is_complete());
         assert_eq!(angle.degrees(), 360);
         assert_eq!(angle.deg_fract(), 0);
@@ -481,24 +481,24 @@ mod tests {
     #[test]
     #[should_panic(expected = "ArcMinutes")]
     fn bad_minutes() {
-        let _a = AccurateDegree::with_dms(30, 60, 60, 0).unwrap();
+        let _a = AccurateDegree::from_dms(30, 60, 60, 0).unwrap();
     }
 
     #[test]
     #[should_panic(expected = "ArcSeconds")]
     fn bad_seconds() {
-        let _a = AccurateDegree::with_dms(30, 59, 60, 0).unwrap();
+        let _a = AccurateDegree::from_dms(30, 59, 60, 0).unwrap();
     }
 
     #[test]
     #[should_panic(expected = "ArcSeconds")]
     fn bad_seconds_2() {
-        let _a = AccurateDegree::with_dms(30, 59, 100, 0).unwrap();
+        let _a = AccurateDegree::from_dms(30, 59, 100, 0).unwrap();
     }
 
     #[test]
     fn good_milli_seconds() {
-        let angle = AccurateDegree::with_dms(30, 59, 0, 99).unwrap();
+        let angle = AccurateDegree::from_dms(30, 59, 0, 99).unwrap();
         assert_eq!(angle.degrees(), 30);
         assert_eq!(angle.arc_minutes(), 59);
         assert_eq!(angle.arc_seconds(), 0);
@@ -508,13 +508,13 @@ mod tests {
     #[test]
     #[should_panic(expected = "ArcCentiSeconds")]
     fn bad_milli_seconds() {
-        let _a = AccurateDegree::with_dms(30, 59, 0, 100).unwrap();
+        let _a = AccurateDegree::from_dms(30, 59, 0, 100).unwrap();
     }
 
     #[test]
     #[should_panic(expected = "ArcCentiSeconds")]
     fn bad_milli_seconds_2() {
-        let _a = AccurateDegree::with_dms(30, 59, 0, 150).unwrap();
+        let _a = AccurateDegree::from_dms(30, 59, 0, 150).unwrap();
     }
 
     #[test]
@@ -522,7 +522,7 @@ mod tests {
         let angle = AccurateDegree::try_from(23.499_999).unwrap();
         assert!(angle.is_acute());
 
-        let angle2 = AccurateDegree::with_deg_and_fraction(23, 499_999).unwrap();
+        let angle2 = AccurateDegree::from_deg_and_fraction(23, 499_999).unwrap();
         assert_eq!(angle, angle2);
 
         let as_float = Into::<f64>::into(angle);
@@ -562,7 +562,7 @@ mod tests {
 
     #[test]
     fn from_u8() {
-        let angle = AccurateDegree::with_deg_and_fraction(108, 0).unwrap();
+        let angle = AccurateDegree::from_deg_and_fraction(108, 0).unwrap();
         assert!(angle.is_obtuse());
 
         let angle2 = 108.try_into().unwrap();
@@ -637,7 +637,7 @@ mod tests {
 
     #[test]
     fn good_fraction_minus_one_is_overflow() {
-        let angle = AccurateDegree::with_deg_and_fraction(30, 999_999).unwrap();
+        let angle = AccurateDegree::from_deg_and_fraction(30, 999_999).unwrap();
         assert_eq!(angle.degrees(), 30);
         assert_eq!(angle.deg_fract(), 999_999);
         let as_float: f64 = angle.into();
@@ -661,7 +661,7 @@ mod tests {
 
     #[test]
     fn good_fraction_minus_two() {
-        let angle = AccurateDegree::with_deg_and_fraction(30, 999_998).unwrap();
+        let angle = AccurateDegree::from_deg_and_fraction(30, 999_998).unwrap();
         assert_eq!(angle.degrees(), 30);
         assert_eq!(angle.deg_fract(), 999_998);
         let as_float: f64 = angle.into();
@@ -676,19 +676,19 @@ mod tests {
     #[test]
     #[should_panic(expected = "MicroDegrees")]
     fn bad_fraction() {
-        let _a = AccurateDegree::with_deg_and_fraction(30, 10_000_000).unwrap();
+        let _a = AccurateDegree::from_deg_and_fraction(30, 10_000_000).unwrap();
     }
 
     #[test]
     #[should_panic(expected = "MicroDegrees")]
     fn bad_fraction_2() {
-        let _a = AccurateDegree::with_deg_and_fraction(30, 15_000_000).unwrap();
+        let _a = AccurateDegree::from_deg_and_fraction(30, 15_000_000).unwrap();
     }
 
     #[test]
     fn test_very_small_angles() {
         for f in 0..1000 {
-            let angle = AccurateDegree::with_deg_and_fraction(0, f).unwrap();
+            let angle = AccurateDegree::from_deg_and_fraction(0, f).unwrap();
             assert_eq!(angle.degrees(), 0);
             assert_eq!(angle.deg_fract(), f);
             assert_eq!(angle.units(), f * 9);
@@ -700,7 +700,7 @@ mod tests {
     fn test_first_degree_every_fraction_with_step_1() {
         let mut prev = None;
         for f in 0..1_000_000 {
-            let angle = AccurateDegree::with_deg_and_fraction(0, f).unwrap();
+            let angle = AccurateDegree::from_deg_and_fraction(0, f).unwrap();
             assert_eq!(angle.degrees(), 0);
             assert_eq!(angle.deg_fract(), f);
 
@@ -711,7 +711,7 @@ mod tests {
                 assert!(angle > prev);
                 assert_eq!(
                     angle - prev,
-                    AccurateDegree::with_deg_and_fraction(0, 1).unwrap()
+                    AccurateDegree::from_deg_and_fraction(0, 1).unwrap()
                 );
             }
 
@@ -721,7 +721,7 @@ mod tests {
 
     fn round_trip(deg: u16, min: u8, sec: u8, centi_sec: u8) {
         eprintln!("\n\n================");
-        let angle = AccurateDegree::with_dms(deg, min, sec, centi_sec).unwrap();
+        let angle = AccurateDegree::from_dms(deg, min, sec, centi_sec).unwrap();
         dbg!(&angle);
 
         assert_eq!(angle.degrees(), deg);
@@ -754,7 +754,7 @@ mod tests {
 
     #[test]
     fn dms_almost_int() {
-        let angle = AccurateDegree::with_dms(156, 59, 59, 99).unwrap();
+        let angle = AccurateDegree::from_dms(156, 59, 59, 99).unwrap();
 
         assert_eq!(angle.degrees(), 156);
         assert_eq!(angle.deg_fract(), 999_997);
@@ -762,21 +762,21 @@ mod tests {
 
     #[test]
     fn print_fraction() {
-        let d = AccurateDegree::with_deg_and_fraction(60, 546_718).unwrap();
+        let d = AccurateDegree::from_deg_and_fraction(60, 546_718).unwrap();
         assert_eq!(d.to_string(), "60.546718°");
     }
 
     #[test]
     fn print_fraction_almost_integer() {
         let almost_20 = AccurateDegree::try_from(20).unwrap()
-            - AccurateDegree::with_deg_and_fraction(0, 1).unwrap();
+            - AccurateDegree::from_deg_and_fraction(0, 1).unwrap();
 
         assert_eq!(almost_20.to_string(), "19.999999°");
     }
 
     #[test]
     fn print_fraction_very_small() {
-        let almost_zero = AccurateDegree::with_deg_and_fraction(0, 1).unwrap();
+        let almost_zero = AccurateDegree::from_deg_and_fraction(0, 1).unwrap();
         assert_eq!(almost_zero.to_string(), "0.000001°");
     }
 
@@ -808,7 +808,7 @@ mod tests {
 
     #[test]
     fn print_fraction_as_dms() {
-        let d = AccurateDegree::with_deg_and_fraction(60, 546_718).unwrap();
+        let d = AccurateDegree::from_deg_and_fraction(60, 546_718).unwrap();
         let s = format!("{:#}", d);
         assert_eq!(s, "60°32′48.18″");
     }
@@ -816,7 +816,7 @@ mod tests {
     #[test]
     fn print_fraction_as_dms_without_milli() {
         for f in 0..3 {
-            let d = AccurateDegree::with_deg_and_fraction(60, 546_666 + f).unwrap();
+            let d = AccurateDegree::from_deg_and_fraction(60, 546_666 + f).unwrap();
             let s = format!("{:#}", d);
             assert_eq!(s, "60°32′48″");
         }
@@ -825,7 +825,7 @@ mod tests {
     #[test]
     fn print_fraction_as_dms_without_seconds() {
         for f in 0..3 {
-            let d = AccurateDegree::with_deg_and_fraction(60, 533_332 + f).unwrap();
+            let d = AccurateDegree::from_deg_and_fraction(60, 533_332 + f).unwrap();
             let s = format!("{:#}", d);
             assert_eq!(s, "60°32′");
         }
@@ -833,15 +833,15 @@ mod tests {
 
     #[test]
     fn print_overflow_fraction_as_dms() {
-        let d = AccurateDegree::with_deg_and_fraction(59, 999_999).unwrap();
+        let d = AccurateDegree::from_deg_and_fraction(59, 999_999).unwrap();
         let s = format!("{:#}", d);
         assert_eq!(s, "60°");
     }
 
     #[test]
     fn add() {
-        let first = AccurateDegree::with_dms(118, 51, 27, 95).unwrap();
-        let second = AccurateDegree::with_dms(47, 38, 19, 75).unwrap();
+        let first = AccurateDegree::from_dms(118, 51, 27, 95).unwrap();
+        let second = AccurateDegree::from_dms(47, 38, 19, 75).unwrap();
         let sum = first + second;
 
         assert_eq!(sum.degrees(), 166);
@@ -853,7 +853,7 @@ mod tests {
     #[test]
     fn add_minimal_overflow() {
         let max = AccurateDegree::complete();
-        let min = AccurateDegree::with_deg_and_fraction(0, 1).unwrap();
+        let min = AccurateDegree::from_deg_and_fraction(0, 1).unwrap();
 
         let add_res = max.checked_add(&min);
         assert!(add_res.is_none());
@@ -861,13 +861,13 @@ mod tests {
         // wrapped around
         assert_eq!(
             max + min,
-            AccurateDegree::with_deg_and_fraction(0, 1).unwrap()
+            AccurateDegree::from_deg_and_fraction(0, 1).unwrap()
         );
     }
 
     #[test]
     fn add_with_wrapping() {
-        let first = AccurateDegree::with_dms(256, 18, 0, 60).unwrap();
+        let first = AccurateDegree::from_dms(256, 18, 0, 60).unwrap();
         let second = (153, 4, 0, 0).try_into().unwrap();
 
         // wrapped around
@@ -877,7 +877,7 @@ mod tests {
     #[test]
     fn add_no_overflow() {
         let max = AccurateDegree::straight();
-        let min = AccurateDegree::with_deg_and_fraction(0, 1).unwrap();
+        let min = AccurateDegree::from_deg_and_fraction(0, 1).unwrap();
 
         let res = max
             .checked_sub(&min)
@@ -888,7 +888,7 @@ mod tests {
 
     #[test]
     fn summing_dms_does_not_accumulate_errors() {
-        let min = AccurateDegree::with_dms(0, 0, 0, 1).unwrap();
+        let min = AccurateDegree::from_dms(0, 0, 0, 1).unwrap();
 
         let mut acc = AccurateDegree::zero();
 
@@ -901,8 +901,8 @@ mod tests {
 
     #[test]
     fn sub() {
-        let first = AccurateDegree::with_dms(318, 51, 27, 96).unwrap();
-        let second = AccurateDegree::with_dms(47, 38, 19, 74).unwrap();
+        let first = AccurateDegree::from_dms(318, 51, 27, 96).unwrap();
+        let second = AccurateDegree::from_dms(47, 38, 19, 74).unwrap();
         let sum = first - second;
 
         assert_eq!(sum.degrees(), 271);
@@ -913,16 +913,16 @@ mod tests {
 
     #[test]
     fn sub_underflow() {
-        let first = AccurateDegree::with_dms(47, 38, 19, 74).unwrap();
-        let second = AccurateDegree::with_dms(47, 38, 19, 75).unwrap();
+        let first = AccurateDegree::from_dms(47, 38, 19, 74).unwrap();
+        let second = AccurateDegree::from_dms(47, 38, 19, 75).unwrap();
         let sum = first.checked_sub(&second);
         assert!(sum.is_none());
     }
 
     #[test]
     fn sub_with_zero_res() {
-        let first = AccurateDegree::with_dms(47, 38, 19, 74).unwrap();
-        let second = AccurateDegree::with_dms(47, 38, 19, 74).unwrap();
+        let first = AccurateDegree::from_dms(47, 38, 19, 74).unwrap();
+        let second = AccurateDegree::from_dms(47, 38, 19, 74).unwrap();
         let sum = first.checked_sub(&second).unwrap();
         assert!(sum.is_zero());
     }
@@ -938,7 +938,7 @@ mod tests {
 
     #[test]
     fn complementary_dms() {
-        let angle = AccurateDegree::with_dms(47, 38, 19, 74).unwrap();
+        let angle = AccurateDegree::from_dms(47, 38, 19, 74).unwrap();
         let supp = angle.complement().unwrap();
         assert_eq!(supp.degrees(), 42);
         assert_eq!(supp.arc_minutes(), 21);
@@ -948,7 +948,7 @@ mod tests {
 
     #[test]
     fn complement_of_obtuse_undefined() {
-        let angle = AccurateDegree::with_dms(117, 38, 19, 74).unwrap();
+        let angle = AccurateDegree::from_dms(117, 38, 19, 74).unwrap();
         assert!(angle.complement().is_none());
     }
 
@@ -962,7 +962,7 @@ mod tests {
 
     #[test]
     fn supplementary_dms() {
-        let angle = AccurateDegree::with_dms(157, 44, 3, 11).unwrap();
+        let angle = AccurateDegree::from_dms(157, 44, 3, 11).unwrap();
         let supp = angle.supplement().unwrap();
         assert_eq!(supp.degrees(), 22);
         assert_eq!(supp.arc_minutes(), 15);
@@ -972,7 +972,7 @@ mod tests {
 
     #[test]
     fn supplement_of_reflex_undefined() {
-        let angle = AccurateDegree::with_dms(190, 38, 19, 74).unwrap();
+        let angle = AccurateDegree::from_dms(190, 38, 19, 74).unwrap();
         assert!(angle.supplement().is_none());
     }
 
@@ -986,7 +986,7 @@ mod tests {
 
     #[test]
     fn explementary_dms() {
-        let angle = AccurateDegree::with_dms(275, 44, 3, 11).unwrap();
+        let angle = AccurateDegree::from_dms(275, 44, 3, 11).unwrap();
         let exp = angle.explement();
         assert_eq!(exp.degrees(), 84);
         assert_eq!(exp.arc_minutes(), 15);
@@ -996,7 +996,7 @@ mod tests {
 
     #[test]
     fn explement_of_obtuse_is_reflex() {
-        let angle = AccurateDegree::with_dms(95, 38, 19, 74).unwrap();
+        let angle = AccurateDegree::from_dms(95, 38, 19, 74).unwrap();
         let exp = angle.explement();
         assert_eq!(exp.degrees(), 264);
         assert_eq!(exp.arc_minutes(), 21);
@@ -1016,7 +1016,7 @@ mod parse_tests {
         assert_eq!(angle.degrees(), 54);
         assert_eq!(angle.deg_fract(), 0);
 
-        assert_eq!(angle, AccurateDegree::with_dms(54, 0, 0, 0).unwrap());
+        assert_eq!(angle, AccurateDegree::from_dms(54, 0, 0, 0).unwrap());
     }
 
     #[test]
@@ -1026,7 +1026,7 @@ mod parse_tests {
         assert_eq!(angle.degrees(), 54);
         assert_eq!(angle.deg_fract(), 0);
 
-        assert_eq!(angle, AccurateDegree::with_dms(54, 0, 0, 0).unwrap());
+        assert_eq!(angle, AccurateDegree::from_dms(54, 0, 0, 0).unwrap());
     }
 
     #[test]

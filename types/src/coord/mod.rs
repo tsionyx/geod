@@ -56,7 +56,7 @@ impl<T: From<bool>> FromSign for T {
 trait AngleAndDirection<A: Angle>: Sized {
     type Direction;
 
-    fn with_angle_and_direction(angle: A, direction: Self::Direction) -> Result<Self, A::NumErr>;
+    fn from_angle_and_direction(angle: A, direction: Self::Direction) -> Result<Self, A::NumErr>;
 }
 
 trait ParsedCoordinate<A>: AngleAndDirection<A>
@@ -64,14 +64,19 @@ where
     A: Angle + FromStr<Err = <A as Angle>::ParseErr>,
     A::NumErr: Into<A::ParseErr>,
 {
-    fn with_angle_only(angle: A) -> Option<Self>;
+    // TODO: replace this with the
+    //       trait ParsedCoordinate<A>: TryFrom<A> ...
+    //           &&
+    //       impl<A: Angle> TryFrom<A> for Latitude<A> ...
+    //   when the specialization will be ready (https://github.com/rust-lang/rust/issues/31844)
+    fn from_angle_alone(angle: A) -> Option<Self>;
 
-    fn with_str_angle_and_direction(
+    fn from_str_angle_and_direction(
         angle_str: &str,
         direction: Self::Direction,
     ) -> Result<Self, A::ParseErr> {
         let angle = angle_str.parse()?;
-        Self::with_angle_and_direction(angle, direction).map_err(A::NumErr::into)
+        Self::from_angle_and_direction(angle, direction).map_err(A::NumErr::into)
     }
 
     fn parse(s: &str) -> Result<Self, ParseCoordinateError<A::ParseErr>>
@@ -88,7 +93,7 @@ where
             if rest.ends_with(' ') {
                 assert_eq!(rest.pop(), Some(' '));
             }
-            return Self::with_str_angle_and_direction(&rest, direction)
+            return Self::from_str_angle_and_direction(&rest, direction)
                 .map_err(ParseCoordinateError::Angle);
         }
 
@@ -98,20 +103,20 @@ where
             if rest.starts_with(' ') {
                 assert_eq!(rest.remove(0), ' ');
             }
-            return Self::with_str_angle_and_direction(&rest, direction)
+            return Self::from_str_angle_and_direction(&rest, direction)
                 .map_err(ParseCoordinateError::Angle);
         }
 
         if let Some(pole) = Self::Direction::from_sign(first) {
             // no space is allowed
-            return Self::with_str_angle_and_direction(&rest, pole)
+            return Self::from_str_angle_and_direction(&rest, pole)
                 .map_err(ParseCoordinateError::Angle);
         }
 
         // for some values neither prefix nor suffix is required
         // only angle's value itself is sufficient
         if let Ok(angle) = s.parse() {
-            if let Some(self_) = Self::with_angle_only(angle) {
+            if let Some(self_) = Self::from_angle_alone(angle) {
                 return Ok(self_);
             }
         }

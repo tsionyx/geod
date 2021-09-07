@@ -35,7 +35,7 @@ impl<A: Angle> Latitude<A> {
     {
         angle
             .try_into()
-            .and_then(|angle| Self::with_angle_and_direction(angle, North))
+            .and_then(|angle| Self::from_angle_and_direction(angle, North))
     }
 
     /// Construct a southern latitude with some numeric information.
@@ -50,7 +50,7 @@ impl<A: Angle> Latitude<A> {
     {
         angle
             .try_into()
-            .and_then(|angle| Self::with_angle_and_direction(angle, South))
+            .and_then(|angle| Self::from_angle_and_direction(angle, South))
     }
 
     /// The central latitude of the sphere equidistant from the poles
@@ -94,7 +94,7 @@ impl<A: Angle> Default for Latitude<A> {
 impl<A: Angle> AngleAndDirection<A> for Latitude<A> {
     type Direction = Pole;
 
-    fn with_angle_and_direction(angle: A, hemisphere: Self::Direction) -> Result<Self, A::NumErr> {
+    fn from_angle_and_direction(angle: A, hemisphere: Self::Direction) -> Result<Self, A::NumErr> {
         let angle = angle.and_not_obtuse()?;
 
         let angle = match hemisphere {
@@ -113,7 +113,7 @@ where
     A: Angle + FromStr<Err = <A as Angle>::ParseErr>,
     A::ParseErr: From<A::NumErr>,
 {
-    fn with_angle_only(angle: A) -> Option<Self> {
+    fn from_angle_alone(angle: A) -> Option<Self> {
         if angle.is_zero() {
             Some(Self::equator())
         } else {
@@ -142,7 +142,7 @@ impl<A: Angle> Neg for Latitude<A> {
             // just a convention for equator, it means nothing when constructing a Latitude
             None => North,
         };
-        Self::with_angle_and_direction(angle, opposite_pole)
+        Self::from_angle_and_direction(angle, opposite_pole)
             .expect("Cannot construct the opposite latitude")
     }
 }
@@ -153,7 +153,7 @@ impl<A: Angle> TryFrom<f64> for Latitude<A> {
     fn try_from(value: f64) -> Result<Self, Self::Error> {
         let (value, is_north) = value.abs_and_sign();
         let angle = value.try_into()?;
-        Self::with_angle_and_direction(angle, is_north.into())
+        Self::from_angle_and_direction(angle, is_north.into())
     }
 }
 
@@ -169,7 +169,7 @@ where
         let (deg, sign) = deg.abs_and_sign();
         let angle = (u16::from(deg), min, sec, milli).try_into()?;
 
-        Self::with_angle_and_direction(angle, sign.into())
+        Self::from_angle_and_direction(angle, sign.into())
     }
 }
 
@@ -297,8 +297,8 @@ mod tests_accur {
     /// <https://en.wikipedia.org/wiki/Circle_of_latitude>
     fn common_earth_parallels() -> Vec<Latitude<AccurateDegree>> {
         let south_pole = South.into();
-        let antarctic_circle = Latitude::with_angle_and_direction(
-            AccurateDegree::with_dms(66, 33, 48, 0).unwrap(),
+        let antarctic_circle = Latitude::from_angle_and_direction(
+            AccurateDegree::from_dms(66, 33, 48, 0).unwrap(),
             South,
         )
         .unwrap();
@@ -368,8 +368,8 @@ mod tests_accur {
     #[test]
     fn equal_equators() {
         let equator = Latitude::equator();
-        let equator1 = Latitude::with_angle_and_direction(AccurateDegree::zero(), South).unwrap();
-        let equator2 = Latitude::with_angle_and_direction(AccurateDegree::zero(), North).unwrap();
+        let equator1 = Latitude::from_angle_and_direction(AccurateDegree::zero(), South).unwrap();
+        let equator2 = Latitude::from_angle_and_direction(AccurateDegree::zero(), North).unwrap();
         let equator3 = 0.try_into().unwrap();
 
         assert_eq!(equator, equator1);
@@ -394,7 +394,7 @@ mod tests_accur {
     #[should_panic(expected = "ObtuseAngle")]
     fn bad_latitude_overflow() {
         let angle: AccurateDegree = 100.try_into().unwrap();
-        let _l = Latitude::with_angle_and_direction(angle, North).unwrap();
+        let _l = Latitude::from_angle_and_direction(angle, North).unwrap();
     }
 
     #[test]
@@ -415,8 +415,8 @@ mod tests_accur {
     #[test]
     #[should_panic(expected = "ObtuseAngle")]
     fn bad_latitude_underflow() {
-        let angle = AccurateDegree::with_dms(150, 0, 0, 0).unwrap();
-        let _l = Latitude::with_angle_and_direction(angle, South).unwrap();
+        let angle = AccurateDegree::from_dms(150, 0, 0, 0).unwrap();
+        let _l = Latitude::from_angle_and_direction(angle, South).unwrap();
     }
 
     #[test]
@@ -425,7 +425,7 @@ mod tests_accur {
         assert_eq!(l.hemisphere(), Some(North));
         assert!(l
             .angle_from_equator()
-            .almost_equal(AccurateDegree::with_dms(41, 37, 21, 4).unwrap()));
+            .almost_equal(AccurateDegree::from_dms(41, 37, 21, 4).unwrap()));
 
         let l2 = Latitude::north(41.622_512).unwrap();
         assert_eq!(l, l2);
@@ -437,7 +437,7 @@ mod tests_accur {
         assert_eq!(l.hemisphere(), Some(South));
         assert!(l
             .angle_from_equator()
-            .almost_equal(AccurateDegree::with_dms(84, 7, 13, 64).unwrap()));
+            .almost_equal(AccurateDegree::from_dms(84, 7, 13, 64).unwrap()));
 
         let l2 = Latitude::south(84.120_456).unwrap();
         assert_eq!(l, l2);
@@ -489,7 +489,7 @@ mod parse_tests_accur {
         assert_eq!(l.hemisphere(), Some(North));
         assert_eq!(
             l.angle_from_equator(),
-            AccurateDegree::with_dms(34, 16, 22, 0).unwrap()
+            AccurateDegree::from_dms(34, 16, 22, 0).unwrap()
         );
     }
 
@@ -502,7 +502,7 @@ mod parse_tests_accur {
         assert_eq!(l.hemisphere(), Some(South));
         assert_eq!(
             l.angle_from_equator(),
-            AccurateDegree::with_dms(43, 20, 7, 15).unwrap()
+            AccurateDegree::from_dms(43, 20, 7, 15).unwrap()
         );
     }
 
@@ -528,7 +528,7 @@ mod parse_tests_accur {
         assert_eq!(l.hemisphere(), Some(North));
         assert_eq!(
             l.angle_from_equator(),
-            AccurateDegree::with_dms(34, 16, 0, 0).unwrap()
+            AccurateDegree::from_dms(34, 16, 0, 0).unwrap()
         );
     }
 
@@ -541,7 +541,7 @@ mod parse_tests_accur {
         assert_eq!(l.hemisphere(), Some(South));
         assert_eq!(
             l.angle_from_equator(),
-            AccurateDegree::with_dms(89, 0, 2, 44).unwrap()
+            AccurateDegree::from_dms(89, 0, 2, 44).unwrap()
         );
     }
 
@@ -567,7 +567,7 @@ mod parse_tests_accur {
         assert_eq!(l.hemisphere(), Some(North));
         assert_eq!(
             l.angle_from_equator(),
-            AccurateDegree::with_dms(34, 16, 0, 0).unwrap()
+            AccurateDegree::from_dms(34, 16, 0, 0).unwrap()
         );
     }
 
@@ -580,7 +580,7 @@ mod parse_tests_accur {
         assert_eq!(l.hemisphere(), Some(South));
         assert_eq!(
             l.angle_from_equator(),
-            AccurateDegree::with_dms(89, 0, 2, 44).unwrap()
+            AccurateDegree::from_dms(89, 0, 2, 44).unwrap()
         );
     }
 
@@ -670,8 +670,8 @@ mod tests_dec {
     /// <https://en.wikipedia.org/wiki/Circle_of_latitude>
     fn common_earth_parallels() -> Vec<Latitude<DecimalDegree>> {
         let south_pole = South.into();
-        let antarctic_circle = Latitude::with_angle_and_direction(
-            DecimalDegree::with_dms(66, 33, 48, 0).unwrap(),
+        let antarctic_circle = Latitude::from_angle_and_direction(
+            DecimalDegree::from_dms(66, 33, 48, 0).unwrap(),
             South,
         )
         .unwrap();
@@ -741,8 +741,8 @@ mod tests_dec {
     #[test]
     fn equal_equators() {
         let equator = Latitude::equator();
-        let equator1 = Latitude::with_angle_and_direction(DecimalDegree::zero(), South).unwrap();
-        let equator2 = Latitude::with_angle_and_direction(DecimalDegree::zero(), North).unwrap();
+        let equator1 = Latitude::from_angle_and_direction(DecimalDegree::zero(), South).unwrap();
+        let equator2 = Latitude::from_angle_and_direction(DecimalDegree::zero(), North).unwrap();
         let equator3 = 0.try_into().unwrap();
 
         assert_eq!(equator, equator1);
@@ -767,7 +767,7 @@ mod tests_dec {
     #[should_panic(expected = "ObtuseAngle")]
     fn bad_latitude_overflow() {
         let angle: DecimalDegree = 100.try_into().unwrap();
-        let _l = Latitude::with_angle_and_direction(angle, North).unwrap();
+        let _l = Latitude::from_angle_and_direction(angle, North).unwrap();
     }
 
     #[test]
@@ -788,8 +788,8 @@ mod tests_dec {
     #[test]
     #[should_panic(expected = "ObtuseAngle")]
     fn bad_latitude_underflow() {
-        let angle = DecimalDegree::with_dms(150, 0, 0, 0).unwrap();
-        let _l = Latitude::with_angle_and_direction(angle, South).unwrap();
+        let angle = DecimalDegree::from_dms(150, 0, 0, 0).unwrap();
+        let _l = Latitude::from_angle_and_direction(angle, South).unwrap();
     }
 
     #[test]
@@ -798,7 +798,7 @@ mod tests_dec {
         assert_eq!(l.hemisphere(), Some(North));
         assert!(l
             .angle_from_equator()
-            .almost_equal(DecimalDegree::with_dms(41, 37, 21, 43).unwrap()));
+            .almost_equal(DecimalDegree::from_dms(41, 37, 21, 43).unwrap()));
 
         let l2 = Latitude::north(41.622_512).unwrap();
         assert_eq!(l, l2);
@@ -810,7 +810,7 @@ mod tests_dec {
         assert_eq!(l.hemisphere(), Some(South));
         assert!(l
             .angle_from_equator()
-            .almost_equal(DecimalDegree::with_dms(84, 7, 13, 642).unwrap()));
+            .almost_equal(DecimalDegree::from_dms(84, 7, 13, 642).unwrap()));
 
         let l2 = Latitude::south(84.120_456).unwrap();
         assert_eq!(l, l2);
@@ -859,7 +859,7 @@ mod parse_tests_dec {
         assert_eq!(l.hemisphere(), Some(North));
         assert_eq!(
             l.angle_from_equator(),
-            DecimalDegree::with_dms(34, 16, 22, 0).unwrap()
+            DecimalDegree::from_dms(34, 16, 22, 0).unwrap()
         );
     }
 
@@ -872,7 +872,7 @@ mod parse_tests_dec {
         assert_eq!(l.hemisphere(), Some(South));
         assert_eq!(
             l.angle_from_equator(),
-            DecimalDegree::with_dms(43, 20, 7, 150).unwrap()
+            DecimalDegree::from_dms(43, 20, 7, 150).unwrap()
         );
     }
 
@@ -898,7 +898,7 @@ mod parse_tests_dec {
         assert_eq!(l.hemisphere(), Some(North));
         assert_eq!(
             l.angle_from_equator(),
-            DecimalDegree::with_dms(34, 16, 0, 0).unwrap()
+            DecimalDegree::from_dms(34, 16, 0, 0).unwrap()
         );
     }
 
@@ -911,7 +911,7 @@ mod parse_tests_dec {
         assert_eq!(l.hemisphere(), Some(South));
         assert_eq!(
             l.angle_from_equator(),
-            DecimalDegree::with_dms(89, 0, 2, 440).unwrap()
+            DecimalDegree::from_dms(89, 0, 2, 440).unwrap()
         );
     }
 
@@ -937,7 +937,7 @@ mod parse_tests_dec {
         assert_eq!(l.hemisphere(), Some(North));
         assert_eq!(
             l.angle_from_equator(),
-            DecimalDegree::with_dms(34, 16, 0, 0).unwrap()
+            DecimalDegree::from_dms(34, 16, 0, 0).unwrap()
         );
     }
 
@@ -950,7 +950,7 @@ mod parse_tests_dec {
         assert_eq!(l.hemisphere(), Some(South));
         assert_eq!(
             l.angle_from_equator(),
-            DecimalDegree::with_dms(89, 0, 2, 440).unwrap()
+            DecimalDegree::from_dms(89, 0, 2, 440).unwrap()
         );
     }
 
@@ -1038,7 +1038,7 @@ mod arith_tests {
         assert_eq!(l2.hemisphere(), Some(North));
         assert_eq!(
             l2.angle_from_equator(),
-            AccurateDegree::with_dms(47, 28, 5, 0).unwrap()
+            AccurateDegree::from_dms(47, 28, 5, 0).unwrap()
         );
     }
 
@@ -1052,7 +1052,7 @@ mod arith_tests {
         assert_eq!(l2.hemisphere(), Some(North));
         assert_eq!(
             l2.angle_from_equator(),
-            DecimalDegree::with_dms(12, 4, 5, 0).unwrap()
+            DecimalDegree::from_dms(12, 4, 5, 0).unwrap()
         );
     }
 
@@ -1086,7 +1086,7 @@ mod arith_tests {
         assert_eq!(l2.hemisphere(), Some(South));
         assert_eq!(
             l2.angle_from_equator(),
-            DecimalDegree::with_dms(42, 42, 29, 25).unwrap()
+            DecimalDegree::from_dms(42, 42, 29, 25).unwrap()
         );
     }
 
@@ -1100,7 +1100,7 @@ mod arith_tests {
         assert_eq!(l2.hemisphere(), Some(South));
         assert_eq!(
             l2.angle_from_equator(),
-            AccurateDegree::with_dms(66, 19, 9, 0).unwrap()
+            AccurateDegree::from_dms(66, 19, 9, 0).unwrap()
         );
     }
 

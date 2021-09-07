@@ -93,9 +93,9 @@ macro_rules! impl_conv_traits {
 
                 // fraction part of the value rounds up to 1
                 if fraction == precision {
-                    Self::with_deg_and_fraction(integer + 1, 0)
+                    Self::from_deg_and_fraction(integer + 1, 0)
                 } else {
-                    Self::with_deg_and_fraction(integer, fraction)
+                    Self::from_deg_and_fraction(integer, fraction)
                 }
             }
         }
@@ -128,7 +128,7 @@ macro_rules! impl_conv_traits {
                     0
                 };
 
-                let good = Self::with_dms(deg, min, sec, sec_fraction)?;
+                let good = Self::from_dms(deg, min, sec, sec_fraction)?;
                 Ok(good)
             }
         }

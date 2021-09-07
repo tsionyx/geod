@@ -35,7 +35,7 @@ impl<A: Angle> Point<A> {
     ///
     /// # Errors
     /// An overflow of some kind can appear when constructing latitude or longitude from the given numbers.
-    pub fn with_coordinates<Lat, Lon>(lat: Lat, lon: Lon) -> Result<Self, A::NumErr>
+    pub fn from_coordinates<Lat, Lon>(lat: Lat, lon: Lon) -> Result<Self, A::NumErr>
     where
         Latitude<A>: TryFrom<Lat, Error = A::NumErr>,
         Longitude<A>: TryFrom<Lon, Error = A::NumErr>,
@@ -141,25 +141,25 @@ mod tests_accur {
     #[test]
     fn north_east() {
         let saint_petersburg = Point::new(
-            Latitude::with_angle_and_direction(
-                AccurateDegree::with_dms(59, 56, 15, 0).unwrap(),
+            Latitude::from_angle_and_direction(
+                AccurateDegree::from_dms(59, 56, 15, 0).unwrap(),
                 North,
             )
             .unwrap(),
             Longitude::east((30, 18, 31, 0)).unwrap(),
         );
-        let saint_petersburg2 = Point::with_coordinates([59, 56, 15], (30, 18, 31)).unwrap();
+        let saint_petersburg2 = Point::from_coordinates([59, 56, 15], (30, 18, 31)).unwrap();
         assert_eq!(saint_petersburg, saint_petersburg2);
 
         assert_eq!(saint_petersburg.lat.hemisphere(), Some(North));
         assert_eq!(
             saint_petersburg.lat.angle_from_equator(),
-            AccurateDegree::with_dms(59, 56, 15, 0).unwrap()
+            AccurateDegree::from_dms(59, 56, 15, 0).unwrap()
         );
 
         assert_eq!(
             saint_petersburg.lon.angle(),
-            AccurateDegree::with_dms(30, 18, 31, 0).unwrap()
+            AccurateDegree::from_dms(30, 18, 31, 0).unwrap()
         );
         assert_eq!(saint_petersburg.lon.direction(), Some(East));
 
@@ -173,25 +173,25 @@ mod tests_accur {
     #[test]
     fn south_west() {
         let santiago = Point::new(
-            Latitude::with_angle_and_direction(
-                AccurateDegree::with_dms(33, 27, 0, 0).unwrap(),
+            Latitude::from_angle_and_direction(
+                AccurateDegree::from_dms(33, 27, 0, 0).unwrap(),
                 South,
             )
             .unwrap(),
             Longitude::west([70, 40, 0, 0]).unwrap(),
         );
-        let santiago2 = Point::with_coordinates((-33, 27), [-70, 40]).unwrap();
+        let santiago2 = Point::from_coordinates((-33, 27), [-70, 40]).unwrap();
         assert_eq!(santiago, santiago2);
 
         assert_eq!(santiago.lat.hemisphere(), Some(South));
         assert_eq!(
             santiago.lat.angle_from_equator(),
-            AccurateDegree::with_dms(33, 27, 0, 0).unwrap()
+            AccurateDegree::from_dms(33, 27, 0, 0).unwrap()
         );
 
         assert_eq!(
             santiago.lon.angle(),
-            AccurateDegree::with_dms(70, 40, 0, 0).unwrap()
+            AccurateDegree::from_dms(70, 40, 0, 0).unwrap()
         );
         assert_eq!(santiago.lon.direction(), Some(West));
 
@@ -202,16 +202,16 @@ mod tests_accur {
     #[test]
     fn lat3_long4() {
         let point =
-            Point::<AccurateDegree>::with_coordinates((-33, 27, 44), [70, 40, 15, 76]).unwrap();
+            Point::<AccurateDegree>::from_coordinates((-33, 27, 44), [70, 40, 15, 76]).unwrap();
         assert_eq!(point.lat.hemisphere(), Some(South));
         assert_eq!(
             point.lat.angle_from_equator(),
-            AccurateDegree::with_dms(33, 27, 44, 0).unwrap()
+            AccurateDegree::from_dms(33, 27, 44, 0).unwrap()
         );
 
         assert_eq!(
             point.lon.angle(),
-            AccurateDegree::with_dms(70, 40, 15, 76).unwrap()
+            AccurateDegree::from_dms(70, 40, 15, 76).unwrap()
         );
         assert_eq!(point.lon.direction(), Some(East));
 
@@ -225,16 +225,16 @@ mod tests_accur {
     #[test]
     fn lat4_long3() {
         let point =
-            Point::<AccurateDegree>::with_coordinates((33, 27, 44, 33), [-167, 11, 2, 4]).unwrap();
+            Point::<AccurateDegree>::from_coordinates((33, 27, 44, 33), [-167, 11, 2, 4]).unwrap();
         assert_eq!(point.lat.hemisphere(), Some(North));
         assert_eq!(
             point.lat.angle_from_equator(),
-            AccurateDegree::with_dms(33, 27, 44, 33).unwrap()
+            AccurateDegree::from_dms(33, 27, 44, 33).unwrap()
         );
 
         assert_eq!(
             point.lon.angle(),
-            AccurateDegree::with_dms(167, 11, 2, 4).unwrap()
+            AccurateDegree::from_dms(167, 11, 2, 4).unwrap()
         );
         assert_eq!(point.lon.direction(), Some(West));
 
@@ -251,14 +251,14 @@ mod tests_accur {
         assert_eq!(l.direction(), Some(East));
         assert!(l
             .angle()
-            .almost_equal(AccurateDegree::with_dms(66, 54, 50, 91).unwrap()));
+            .almost_equal(AccurateDegree::from_dms(66, 54, 50, 91).unwrap()));
     }
 
     #[test]
     fn from_f64_west_long() {
         let l: Longitude<_> = (-122.427_478_3).try_into().unwrap();
-        assert!(Longitude::with_angle_and_direction(
-            AccurateDegree::with_dms(122, 25, 38, 92).unwrap(),
+        assert!(Longitude::from_angle_and_direction(
+            AccurateDegree::from_dms(122, 25, 38, 92).unwrap(),
             West,
         )
         .unwrap()
@@ -306,25 +306,25 @@ mod tests_dec {
     #[test]
     fn north_east() {
         let saint_petersburg = Point::new(
-            Latitude::with_angle_and_direction(
-                DecimalDegree::with_dms(59, 56, 15, 0).unwrap(),
+            Latitude::from_angle_and_direction(
+                DecimalDegree::from_dms(59, 56, 15, 0).unwrap(),
                 North,
             )
             .unwrap(),
             Longitude::east((30, 18, 31, 0)).unwrap(),
         );
-        let saint_petersburg2 = Point::with_coordinates([59, 56, 15], (30, 18, 31)).unwrap();
+        let saint_petersburg2 = Point::from_coordinates([59, 56, 15], (30, 18, 31)).unwrap();
         assert_eq!(saint_petersburg, saint_petersburg2);
 
         assert_eq!(saint_petersburg.lat.hemisphere(), Some(North));
         assert_eq!(
             saint_petersburg.lat.angle_from_equator(),
-            DecimalDegree::with_dms(59, 56, 15, 0).unwrap()
+            DecimalDegree::from_dms(59, 56, 15, 0).unwrap()
         );
 
         assert_eq!(
             saint_petersburg.lon.angle(),
-            DecimalDegree::with_dms(30, 18, 31, 0).unwrap()
+            DecimalDegree::from_dms(30, 18, 31, 0).unwrap()
         );
         assert_eq!(saint_petersburg.lon.direction(), Some(East));
 
@@ -338,25 +338,25 @@ mod tests_dec {
     #[test]
     fn south_west() {
         let santiago = Point::new(
-            Latitude::with_angle_and_direction(
-                DecimalDegree::with_dms(33, 27, 0, 0).unwrap(),
+            Latitude::from_angle_and_direction(
+                DecimalDegree::from_dms(33, 27, 0, 0).unwrap(),
                 South,
             )
             .unwrap(),
             Longitude::west([70, 40, 0, 0]).unwrap(),
         );
-        let santiago2 = Point::with_coordinates((-33, 27), [-70, 40]).unwrap();
+        let santiago2 = Point::from_coordinates((-33, 27), [-70, 40]).unwrap();
         assert_eq!(santiago, santiago2);
 
         assert_eq!(santiago.lat.hemisphere(), Some(South));
         assert_eq!(
             santiago.lat.angle_from_equator(),
-            DecimalDegree::with_dms(33, 27, 0, 0).unwrap()
+            DecimalDegree::from_dms(33, 27, 0, 0).unwrap()
         );
 
         assert_eq!(
             santiago.lon.angle(),
-            DecimalDegree::with_dms(70, 40, 0, 0).unwrap()
+            DecimalDegree::from_dms(70, 40, 0, 0).unwrap()
         );
         assert_eq!(santiago.lon.direction(), Some(West));
 
@@ -367,16 +367,16 @@ mod tests_dec {
     #[test]
     fn lat3_long4() {
         let point =
-            Point::<DecimalDegree>::with_coordinates((-33, 27, 44), [70, 40, 15, 758]).unwrap();
+            Point::<DecimalDegree>::from_coordinates((-33, 27, 44), [70, 40, 15, 758]).unwrap();
         assert_eq!(point.lat.hemisphere(), Some(South));
         assert_eq!(
             point.lat.angle_from_equator(),
-            DecimalDegree::with_dms(33, 27, 44, 0).unwrap()
+            DecimalDegree::from_dms(33, 27, 44, 0).unwrap()
         );
 
         assert_eq!(
             point.lon.angle(),
-            DecimalDegree::with_dms(70, 40, 15, 758).unwrap()
+            DecimalDegree::from_dms(70, 40, 15, 758).unwrap()
         );
         assert_eq!(point.lon.direction(), Some(East));
 
@@ -390,16 +390,16 @@ mod tests_dec {
     #[test]
     fn lat4_long3() {
         let point =
-            Point::<DecimalDegree>::with_coordinates((33, 27, 44, 333), [-167, 11, 2, 45]).unwrap();
+            Point::<DecimalDegree>::from_coordinates((33, 27, 44, 333), [-167, 11, 2, 45]).unwrap();
         assert_eq!(point.lat.hemisphere(), Some(North));
         assert_eq!(
             point.lat.angle_from_equator(),
-            DecimalDegree::with_dms(33, 27, 44, 333).unwrap()
+            DecimalDegree::from_dms(33, 27, 44, 333).unwrap()
         );
 
         assert_eq!(
             point.lon.angle(),
-            DecimalDegree::with_dms(167, 11, 2, 45).unwrap()
+            DecimalDegree::from_dms(167, 11, 2, 45).unwrap()
         );
         assert_eq!(point.lon.direction(), Some(West));
 
@@ -416,15 +416,15 @@ mod tests_dec {
         assert_eq!(l.direction(), Some(East));
         assert!(l
             .angle()
-            .almost_equal(DecimalDegree::with_dms(66, 54, 50, 911).unwrap()));
+            .almost_equal(DecimalDegree::from_dms(66, 54, 50, 911).unwrap()));
     }
 
     #[test]
     fn from_f64_west_long() {
         let l = (-122.427_478_3).try_into().unwrap();
         assert_eq!(
-            Longitude::with_angle_and_direction(
-                DecimalDegree::with_dms(122, 25, 38, 922).unwrap(),
+            Longitude::from_angle_and_direction(
+                DecimalDegree::from_dms(122, 25, 38, 922).unwrap(),
                 West,
             )
             .unwrap(),
@@ -441,10 +441,10 @@ mod tests_arith {
 
     #[test]
     fn simple_antipodal() {
-        let p = Point::<DecimalDegree>::with_coordinates([-32, 46, 10], (3, 1, 11)).unwrap();
+        let p = Point::<DecimalDegree>::from_coordinates([-32, 46, 10], (3, 1, 11)).unwrap();
         assert_eq!(
             p.antipodal(),
-            Point::with_coordinates((32, 46, 10), (-176, 58, 49)).unwrap()
+            Point::from_coordinates((32, 46, 10), (-176, 58, 49)).unwrap()
         );
     }
 
@@ -459,10 +459,10 @@ mod tests_arith {
 
     #[test]
     fn equator_antipodal_is_on_equator() {
-        let p = Point::<DecimalDegree>::with_coordinates(0, (15, 34)).unwrap();
+        let p = Point::<DecimalDegree>::from_coordinates(0, (15, 34)).unwrap();
         assert_eq!(
             p.antipodal(),
-            Point::with_coordinates(0, (-164, 26)).unwrap()
+            Point::from_coordinates(0, (-164, 26)).unwrap()
         );
     }
 }

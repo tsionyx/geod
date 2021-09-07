@@ -149,7 +149,7 @@ pub trait Angle:
 pub(super) trait UnitsAngle: Angle {
     type Units: CheckedAdd + CheckedSub;
 
-    fn with_units(u: Self::Units) -> Result<Self, Self::NumErr>;
+    fn from_units(u: Self::Units) -> Result<Self, Self::NumErr>;
     fn units(self) -> Self::Units;
 
     fn max_units() -> Self::Units {
@@ -184,7 +184,7 @@ macro_rules! impl_angle_ops {
                 let sum_units = (self_units + rhs_units - max)
                     .try_into()
                     .expect("Less than max should be valid");
-                Self::with_units(sum_units)
+                Self::from_units(sum_units)
                     .expect("Wrapping sum around the max degree is always a valid degree")
             }
         }
@@ -194,7 +194,7 @@ macro_rules! impl_angle_ops {
                 self.units()
                     .checked_add(rhs.units())
                     .filter(|&sum_units| sum_units <= Self::max_units())
-                    .and_then(|units| Self::with_units(units).ok())
+                    .and_then(|units| Self::from_units(units).ok())
             }
         }
 
@@ -213,7 +213,7 @@ macro_rules! impl_angle_ops {
                 let max = Self::max_units();
 
                 let diff = max - (rhs - self_);
-                Self::with_units(diff).expect("The diff is less than the max angle")
+                Self::from_units(diff).expect("The diff is less than the max angle")
             }
         }
 
@@ -221,7 +221,7 @@ macro_rules! impl_angle_ops {
             fn checked_sub(&self, rhs: &Self) -> Option<Self> {
                 self.units()
                     .checked_sub(rhs.units())
-                    .and_then(|units| Self::with_units(units).ok())
+                    .and_then(|units| Self::from_units(units).ok())
             }
         }
     };
