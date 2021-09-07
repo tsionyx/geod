@@ -24,6 +24,8 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
+        with:
+          submodules: recursive
 
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
@@ -53,6 +55,8 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
+        with:
+          submodules: recursive
 
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
@@ -60,22 +64,23 @@ jobs:
           toolchain: ${{ matrix.rust }}
           override: true
 
-      - name: Generate Cargo.lock
-        uses: actions-rs/cargo@v1
+      - name: Cache cargo registry
+        uses: actions/cache@v2
         with:
-          command: generate-lockfile
-
-      - name: Cache cargo folder
-        uses: actions/cache@v1
-        with:
-          path: ~/.cargo/
-          key: ${{ runner.os }}-cargo-registry-${{ matrix.rust }}-${{ hashFiles('**/Cargo.lock') }}
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo_registry-
 
       - name: Cache cargo build
-        uses: actions/cache@v1
+        uses: actions/cache@v2
         with:
           path: target
-          key: ${{ runner.os }}-cargo-build-target-${{ matrix.rust }}-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-${{ matrix.rust }}-cargo_target-test-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            - ${{ runner.os }}-${{ matrix.rust }}-cargo_target-test-
+            - ${{ runner.os }}-${{ matrix.rust }}-cargo_target-
 
       - name: Run cargo test
         uses: actions-rs/cargo@v1
@@ -102,6 +107,8 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
+        with:
+          submodules: recursive
 
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
@@ -112,24 +119,37 @@ jobs:
       - name: Install clippy
         run: rustup component add clippy
 
-      - name: Generate Cargo.lock
-        uses: actions-rs/cargo@v1
+      - name: Cache cargo registry
+        uses: actions/cache@v2
         with:
-          command: generate-lockfile
-
-      - name: Cache cargo folder
-        uses: actions/cache@v1
-        with:
-          path: ~/.cargo/
-          key: ${{ runner.os }}-cargo-registry-${{ matrix.rust }}-${{ hashFiles('**/Cargo.lock') }}
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo_registry-
 
       - name: Cache cargo build
-        uses: actions/cache@v1
+        uses: actions/cache@v2
         with:
           path: target
-          key: ${{ runner.os }}-cargo-build-target-${{ matrix.rust }}-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-${{ matrix.rust }}-cargo_target-clippy-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            - ${{ runner.os }}-${{ matrix.rust }}-cargo_target-clippy-
+            - ${{ runner.os }}-${{ matrix.rust }}-cargo_target-
 
       - name: Run cargo clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --all-targets --workspace -- -Dwarnings #-W clippy::nursery -W clippy::pedantic
+
+      - name: Run cargo clippy with all features
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --all-targets --all-features --workspace -- -Dwarnings #-W clippy::nursery -W clippy::pedantic
+
+      - name: Run cargo clippy with all features and the most lints
         uses: actions-rs/cargo@v1
         with:
           command: clippy
