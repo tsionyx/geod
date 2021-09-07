@@ -355,7 +355,7 @@ mod tests {
 
     #[test]
     fn accurate_angle_is_32_bits() {
-        assert_eq!(size_of::<AccurateDegree>(), 4)
+        assert_eq!(size_of::<AccurateDegree>(), 4);
     }
 
     #[test]
@@ -656,7 +656,7 @@ mod tests {
         // this value is closer ...
         assert_eq!(parts_with_the_increased_degree, (31, 0, 0, 0));
         // but inconsistent with the `degrees()` method
-        assert!(parts_with_the_increased_degree.0 > angle.degrees())
+        assert!(parts_with_the_increased_degree.0 > angle.degrees());
     }
 
     #[test]
@@ -743,7 +743,7 @@ mod tests {
                         continue;
                     }
                     for centi in 0..100 {
-                        round_trip(deg, min, sec, centi)
+                        round_trip(deg, min, sec, centi);
                     }
                 }
             }
@@ -763,7 +763,7 @@ mod tests {
     #[test]
     fn print_fraction() {
         let d = AccurateDegree::with_deg_and_fraction(60, 546_718).unwrap();
-        assert_eq!(d.to_string(), "60.546718°")
+        assert_eq!(d.to_string(), "60.546718°");
     }
 
     #[test]
@@ -771,46 +771,46 @@ mod tests {
         let almost_20 = AccurateDegree::try_from(20).unwrap()
             - AccurateDegree::with_deg_and_fraction(0, 1).unwrap();
 
-        assert_eq!(almost_20.to_string(), "19.999999°")
+        assert_eq!(almost_20.to_string(), "19.999999°");
     }
 
     #[test]
     fn print_fraction_very_small() {
         let almost_zero = AccurateDegree::with_deg_and_fraction(0, 1).unwrap();
-        assert_eq!(almost_zero.to_string(), "0.000001°")
+        assert_eq!(almost_zero.to_string(), "0.000001°");
     }
 
     #[test]
     fn print_zero() {
         let d = AccurateDegree::default();
-        assert_eq!(d.to_string(), "0°")
+        assert_eq!(d.to_string(), "0°");
     }
 
     #[test]
     fn print_zero_as_dms() {
         let d = AccurateDegree::default();
         let s = format!("{:#}", d);
-        assert_eq!(s, "0°")
+        assert_eq!(s, "0°");
     }
 
     #[test]
     fn print_right() {
         let d = AccurateDegree::try_from(90).unwrap();
-        assert_eq!(d.to_string(), "90°")
+        assert_eq!(d.to_string(), "90°");
     }
 
     #[test]
     fn print_right_as_dms() {
         let d: AccurateDegree = 90.try_into().unwrap();
         let s = format!("{:#}", d);
-        assert_eq!(s, "90°")
+        assert_eq!(s, "90°");
     }
 
     #[test]
     fn print_fraction_as_dms() {
         let d = AccurateDegree::with_deg_and_fraction(60, 546_718).unwrap();
         let s = format!("{:#}", d);
-        assert_eq!(s, "60°32′48.18″")
+        assert_eq!(s, "60°32′48.18″");
     }
 
     #[test]
@@ -835,7 +835,7 @@ mod tests {
     fn print_overflow_fraction_as_dms() {
         let d = AccurateDegree::with_deg_and_fraction(59, 999_999).unwrap();
         let s = format!("{:#}", d);
-        assert_eq!(s, "60°")
+        assert_eq!(s, "60°");
     }
 
     #[test]

@@ -319,7 +319,7 @@ mod tests {
 
     #[test]
     fn degree_angle_is_32_bits() {
-        assert_eq!(size_of::<DecimalDegree>(), 4)
+        assert_eq!(size_of::<DecimalDegree>(), 4);
     }
 
     #[test]
@@ -622,7 +622,7 @@ mod tests {
         // this value is closer ...
         assert_eq!(parts_with_the_increased_degree, (31, 0, 0, 0));
         // but inconsistent with the `degrees()` method
-        assert!(parts_with_the_increased_degree.0 > angle.degrees())
+        assert!(parts_with_the_increased_degree.0 > angle.degrees());
     }
 
     #[test]
@@ -714,7 +714,7 @@ mod tests {
                             continue;
                         }
 
-                        round_trip(deg, min, sec, milli)
+                        round_trip(deg, min, sec, milli);
                     }
                 }
             }
@@ -734,7 +734,7 @@ mod tests {
     #[test]
     fn print_fraction() {
         let d = DecimalDegree::with_deg_and_fraction(60, 5_467_182).unwrap();
-        assert_eq!(d.to_string(), "60.5467182°")
+        assert_eq!(d.to_string(), "60.5467182°");
     }
 
     #[test]
@@ -742,46 +742,46 @@ mod tests {
         let almost_20 = DecimalDegree::try_from(20).unwrap()
             - DecimalDegree::with_deg_and_fraction(0, 1).unwrap();
 
-        assert_eq!(almost_20.to_string(), "19.9999999°")
+        assert_eq!(almost_20.to_string(), "19.9999999°");
     }
 
     #[test]
     fn print_fraction_very_small() {
         let almost_zero = DecimalDegree::with_deg_and_fraction(0, 1).unwrap();
-        assert_eq!(almost_zero.to_string(), "0.0000001°")
+        assert_eq!(almost_zero.to_string(), "0.0000001°");
     }
 
     #[test]
     fn print_zero() {
         let d = DecimalDegree::default();
-        assert_eq!(d.to_string(), "0°")
+        assert_eq!(d.to_string(), "0°");
     }
 
     #[test]
     fn print_zero_as_dms() {
         let d = DecimalDegree::default();
         let s = format!("{:#}", d);
-        assert_eq!(s, "0°")
+        assert_eq!(s, "0°");
     }
 
     #[test]
     fn print_right() {
         let d = DecimalDegree::try_from(90).unwrap();
-        assert_eq!(d.to_string(), "90°")
+        assert_eq!(d.to_string(), "90°");
     }
 
     #[test]
     fn print_right_as_dms() {
         let d: DecimalDegree = 90.try_into().unwrap();
         let s = format!("{:#}", d);
-        assert_eq!(s, "90°")
+        assert_eq!(s, "90°");
     }
 
     #[test]
     fn print_fraction_as_dms() {
         let d = DecimalDegree::with_deg_and_fraction(60, 5_467_182).unwrap();
         let s = format!("{:#}", d);
-        assert_eq!(s, "60°32′48.186″")
+        assert_eq!(s, "60°32′48.186″");
     }
 
     #[test]
@@ -806,7 +806,7 @@ mod tests {
     fn print_overflow_fraction_as_dms() {
         let d = DecimalDegree::with_deg_and_fraction(59, 9_999_999).unwrap();
         let s = format!("{:#}", d);
-        assert_eq!(s, "60°")
+        assert_eq!(s, "60°");
     }
 
     #[test]

@@ -381,7 +381,7 @@ mod tests_accur {
     #[test]
     fn good_latitude_max() {
         let l: Latitude<AccurateDegree> = 90.try_into().unwrap();
-        assert_eq!(Latitude::from(North), l)
+        assert_eq!(Latitude::from(North), l);
     }
 
     #[test]
@@ -754,7 +754,7 @@ mod tests_dec {
     #[test]
     fn good_latitude_max() {
         let l: Latitude<DecimalDegree> = 90.try_into().unwrap();
-        assert_eq!(Latitude::from(North), l)
+        assert_eq!(Latitude::from(North), l);
     }
 
     #[test]
@@ -1039,7 +1039,7 @@ mod arith_tests {
         assert_eq!(
             l2.angle_from_equator(),
             AccurateDegree::with_dms(47, 28, 5, 0).unwrap()
-        )
+        );
     }
 
     #[test]
@@ -1053,7 +1053,7 @@ mod arith_tests {
         assert_eq!(
             l2.angle_from_equator(),
             DecimalDegree::with_dms(12, 4, 5, 0).unwrap()
-        )
+        );
     }
 
     #[test]
@@ -1087,7 +1087,7 @@ mod arith_tests {
         assert_eq!(
             l2.angle_from_equator(),
             DecimalDegree::with_dms(42, 42, 29, 25).unwrap()
-        )
+        );
     }
 
     #[test]
@@ -1101,7 +1101,7 @@ mod arith_tests {
         assert_eq!(
             l2.angle_from_equator(),
             AccurateDegree::with_dms(66, 19, 9, 0).unwrap()
-        )
+        );
     }
 
     #[test]
