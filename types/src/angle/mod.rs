@@ -9,7 +9,7 @@ mod degree;
 pub mod dms_dd;
 mod errors;
 
-pub use errors::AngleNotInRange;
+pub use errors::OutOfRange;
 
 #[allow(clippy::module_name_repetitions)]
 /// Common terminology for angles:

@@ -223,7 +223,7 @@ mod partial_try_from {
     use std::convert::TryFrom;
 
     use crate::{
-        angle::{dd::DecimalDegree, dms_dd::AccurateDegree, AngleNotInRange},
+        angle::{dd::DecimalDegree, dms_dd::AccurateDegree, OutOfRange},
         utils::convert_int,
     };
 
@@ -236,9 +236,9 @@ mod partial_try_from {
 
         fn try_from(value: [i16; 4]) -> Result<Self, Self::Error> {
             let [deg, min, sec, centi] = value;
-            let min = convert_int(min).ok_or(AngleNotInRange::ArcMinutes)?;
-            let sec = convert_int(sec).ok_or(AngleNotInRange::ArcSeconds)?;
-            let centi: u8 = convert_int(centi).ok_or(AngleNotInRange::ArcCentiSeconds)?;
+            let min = convert_int(min).ok_or(OutOfRange::ArcMinutes)?;
+            let sec = convert_int(sec).ok_or(OutOfRange::ArcSeconds)?;
+            let centi: u8 = convert_int(centi).ok_or(OutOfRange::ArcCentiSeconds)?;
             Self::try_from((deg, min, sec, u16::from(centi)))
         }
     }
@@ -248,9 +248,9 @@ mod partial_try_from {
 
         fn try_from(value: [i16; 4]) -> Result<Self, Self::Error> {
             let [deg, min, sec, mas] = value;
-            let min = convert_int(min).ok_or(AngleNotInRange::ArcMinutes)?;
-            let sec = convert_int(sec).ok_or(AngleNotInRange::ArcSeconds)?;
-            let mas = convert_int(mas).ok_or(AngleNotInRange::ArcMilliSeconds)?;
+            let min = convert_int(min).ok_or(OutOfRange::ArcMinutes)?;
+            let sec = convert_int(sec).ok_or(OutOfRange::ArcSeconds)?;
+            let mas = convert_int(mas).ok_or(OutOfRange::ArcMilliSeconds)?;
             Self::try_from((deg, min, sec, mas))
         }
     }
@@ -708,13 +708,13 @@ mod bad_parse_tests_accur {
     }
 
     #[test]
-    #[should_panic(expected = "Angle(AngleNotInRange(ReflexAngle))")]
+    #[should_panic(expected = "Angle(Range(ReflexAngle))")]
     fn too_big_angle_east() {
         let _l: Longitude<AccurateDegree> = "+190°16′".parse().unwrap();
     }
 
     #[test]
-    #[should_panic(expected = "Angle(AngleNotInRange(ReflexAngle))")]
+    #[should_panic(expected = "Angle(Range(ReflexAngle))")]
     fn too_big_angle_west() {
         let _l: Longitude<AccurateDegree> = "-181".parse().unwrap();
     }
@@ -1134,13 +1134,13 @@ mod bad_parse_tests_dec {
     }
 
     #[test]
-    #[should_panic(expected = "Angle(AngleNotInRange(ReflexAngle))")]
+    #[should_panic(expected = "Angle(Range(ReflexAngle))")]
     fn too_big_angle_east() {
         let _l: Longitude<DecimalDegree> = "+190°16′".parse().unwrap();
     }
 
     #[test]
-    #[should_panic(expected = "Angle(AngleNotInRange(ReflexAngle))")]
+    #[should_panic(expected = "Angle(Range(ReflexAngle))")]
     fn too_big_angle_west() {
         let _l: Longitude<DecimalDegree> = "-181".parse().unwrap();
     }

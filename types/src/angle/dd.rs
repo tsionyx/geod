@@ -32,7 +32,7 @@ use super::{
         parse_dms_re, ARC_MINUTE_SIGN, ARC_SECOND_SIGN, DEGREE_SIGN, FULL_TURN_DEG, HALF_TURN_DEG,
         MAX_DEGREE, MINUTES_IN_DEGREE, QUARTER_TURN_DEG, SECONDS_IN_MINUTE,
     },
-    errors::{AngleNotInRange, ParseAngleError},
+    errors::{OutOfRange, ParseAngleError},
     Angle, AngleNames, UnitsAngle,
 };
 
@@ -52,9 +52,9 @@ pub struct DecimalDegree {
 impl UnitsAngle for DecimalDegree {
     type Units = u32;
 
-    fn with_units(total_micro_degrees: Self::Units) -> Result<Self, AngleNotInRange> {
+    fn with_units(total_micro_degrees: Self::Units) -> Result<Self, OutOfRange> {
         if total_micro_degrees > Self::max_units() {
-            return Err(AngleNotInRange::Degrees);
+            return Err(OutOfRange::Degrees);
         }
 
         Ok(Self {
@@ -90,10 +90,10 @@ impl DecimalDegree {
         Self::THOUSAND * sec_in_deg
     }
 
-    fn with_deg_and_fraction(degrees: u16, fraction: u32) -> Result<Self, AngleNotInRange> {
+    fn with_deg_and_fraction(degrees: u16, fraction: u32) -> Result<Self, OutOfRange> {
         let valid_degrees = 0..=MAX_DEGREE;
         if !valid_degrees.contains(&degrees) {
-            return Err(AngleNotInRange::Degrees);
+            return Err(OutOfRange::Degrees);
         };
 
         let max_fraction_units = Self::units_in_deg();
@@ -105,11 +105,11 @@ impl DecimalDegree {
         };
 
         if !valid_fraction.contains(&fraction) {
-            return Err(AngleNotInRange::DegreeFraction);
+            return Err(OutOfRange::DegreeFraction);
         }
 
         let units = u64::from(degrees) * u64::from(max_fraction_units) + u64::from(fraction);
-        let units = convert_int(units).ok_or(AngleNotInRange::Degrees)?;
+        let units = convert_int(units).ok_or(OutOfRange::Degrees)?;
         Ok(Self { units })
     }
 
@@ -119,13 +119,13 @@ impl DecimalDegree {
     ///
     /// # Errors
     /// When some part of the angle is out of scope
-    /// (e.g. minutes > 60 or degree > 360), the `AngleNotInRange` returned.
+    /// (e.g. minutes > 60 or degree > 360), the `OutOfRange` returned.
     pub fn with_dms(
         degree: u16,
         minutes: u8,
         seconds: u8,
         milli_seconds: u16,
-    ) -> Result<Self, AngleNotInRange> {
+    ) -> Result<Self, OutOfRange> {
         Self::check_dms(degree, minutes, seconds, milli_seconds)?;
 
         // prevent further multiplication overflow by extending precision
@@ -140,7 +140,7 @@ impl DecimalDegree {
         let denom = Self::mas_in_deg();
 
         let as_units = (u64::from(total_mas) * u64::from(num)).div_round(u64::from(denom));
-        let fraction = convert_int(as_units).ok_or(AngleNotInRange::ArcMinutes)?;
+        let fraction = convert_int(as_units).ok_or(OutOfRange::ArcMinutes)?;
         Self::with_deg_and_fraction(degree, fraction)
     }
 
@@ -149,10 +149,10 @@ impl DecimalDegree {
         minutes: u8,
         seconds: u8,
         milli_seconds: u16,
-    ) -> Result<(), AngleNotInRange> {
+    ) -> Result<(), OutOfRange> {
         let valid_degrees = 0..=MAX_DEGREE;
         if !valid_degrees.contains(&degree) {
-            return Err(AngleNotInRange::Degrees);
+            return Err(OutOfRange::Degrees);
         }
 
         #[allow(clippy::cast_possible_truncation)]
@@ -164,15 +164,15 @@ impl DecimalDegree {
         };
 
         if !valid_minutes.contains(&minutes) {
-            return Err(AngleNotInRange::ArcMinutes);
+            return Err(OutOfRange::ArcMinutes);
         }
 
         if !valid_seconds.contains(&seconds) {
-            return Err(AngleNotInRange::ArcSeconds);
+            return Err(OutOfRange::ArcSeconds);
         }
 
         if !valid_milli.contains(&milli_seconds) {
-            return Err(AngleNotInRange::ArcMilliSeconds);
+            return Err(OutOfRange::ArcMilliSeconds);
         }
 
         Ok(())
@@ -290,7 +290,7 @@ lazy_static! {
 }
 
 impl TryFrom<(u16, u8, u8, u16)> for DecimalDegree {
-    type Error = AngleNotInRange;
+    type Error = OutOfRange;
 
     fn try_from(value: (u16, u8, u8, u16)) -> Result<Self, Self::Error> {
         let (deg, min, sec, milli) = value;
@@ -299,17 +299,17 @@ impl TryFrom<(u16, u8, u8, u16)> for DecimalDegree {
 }
 
 impl TryFrom<[u16; 4]> for DecimalDegree {
-    type Error = AngleNotInRange;
+    type Error = OutOfRange;
 
     fn try_from(value: [u16; 4]) -> Result<Self, Self::Error> {
         let [deg, min, sec, mas] = value;
-        let min = convert_int(min).ok_or(AngleNotInRange::ArcMinutes)?;
-        let sec = convert_int(sec).ok_or(AngleNotInRange::ArcSeconds)?;
+        let min = convert_int(min).ok_or(OutOfRange::ArcMinutes)?;
+        let sec = convert_int(sec).ok_or(OutOfRange::ArcSeconds)?;
         Self::with_dms(deg, min, sec, mas)
     }
 }
 
-try_from_tuples_and_arrays!((u16, u8, u8, u16; max=u16) -> <DecimalDegree, AngleNotInRange>);
+try_from_tuples_and_arrays!((u16, u8, u8, u16; max=u16) -> <DecimalDegree, OutOfRange>);
 
 #[cfg(test)]
 mod tests {
@@ -1041,7 +1041,7 @@ mod parse_tests {
     }
 
     #[test]
-    #[should_panic(expected = "AngleNotInRange(Degrees)")]
+    #[should_panic(expected = "Range(Degrees)")]
     fn bad_negative() {
         let _angle: DecimalDegree = "-54.12".parse().unwrap();
     }
@@ -1054,7 +1054,7 @@ mod parse_tests {
     }
 
     #[test]
-    #[should_panic(expected = "AngleNotInRange(Degrees)")]
+    #[should_panic(expected = "Range(Degrees)")]
     fn bad_too_big_for_angle() {
         let _angle: DecimalDegree = "364.123456".parse().unwrap();
     }
@@ -1156,7 +1156,7 @@ mod parse_tests {
     }
 
     #[test]
-    #[should_panic(expected = "AngleNotInRange(Degrees)")]
+    #[should_panic(expected = "Range(Degrees)")]
     fn overflow_in_domain_deg() {
         let _angle: DecimalDegree = "361°40′".parse().unwrap();
     }
@@ -1299,7 +1299,7 @@ mod parse_ascii_tests {
     }
 
     #[test]
-    #[should_panic(expected = "AngleNotInRange(Degrees)")]
+    #[should_panic(expected = "Range(Degrees)")]
     fn overflow_in_domain_deg() {
         let _angle: DecimalDegree = "361*40'".parse().unwrap();
     }

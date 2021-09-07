@@ -7,7 +7,7 @@ use std::{
 use crate::enum_trivial_from_impl;
 
 #[derive(Debug, Copy, Clone)]
-pub enum AngleNotInRange {
+pub enum OutOfRange {
     Degrees,         // deg > 360
     ReflexAngle,     // deg > 180
     ObtuseAngle,     // deg > 90
@@ -19,7 +19,7 @@ pub enum AngleNotInRange {
     DegreeFraction,  // microdeg >= 10^7
 }
 
-impl fmt::Display for AngleNotInRange {
+impl fmt::Display for OutOfRange {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let msg = match self {
             Self::Degrees => "Too big value for degrees part of an angle (max is 360)",
@@ -41,18 +41,18 @@ impl fmt::Display for AngleNotInRange {
     }
 }
 
-impl Error for AngleNotInRange {}
+impl Error for OutOfRange {}
 
 #[derive(Debug)]
 pub enum ParseAngleError {
-    AngleNotInRange(AngleNotInRange),
+    Range(OutOfRange),
     Float(ParseFloatError),
     // this variant is practically impossible due to regex digits limitations
     Int(ParseIntError),
     DmsNotation,
 }
 
-enum_trivial_from_impl!(AngleNotInRange => ParseAngleError:AngleNotInRange);
+enum_trivial_from_impl!(OutOfRange => ParseAngleError:Range);
 enum_trivial_from_impl!(ParseFloatError => ParseAngleError:Float);
 enum_trivial_from_impl!(ParseIntError => ParseAngleError:Int);
 
@@ -60,7 +60,7 @@ impl fmt::Display for ParseAngleError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Cannot parse angle: ")?;
         match self {
-            Self::AngleNotInRange(inner) => write!(f, "{}", inner),
+            Self::Range(inner) => write!(f, "{}", inner),
             Self::Float(inner) => write!(f, "{}", inner),
             Self::Int(inner) => write!(f, "{}", inner),
             Self::DmsNotation => write!(f, "not a Degree-Minute-Second notation"),

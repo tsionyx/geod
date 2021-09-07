@@ -31,7 +31,7 @@ use super::{
         parse_dms_re, ARC_MINUTE_SIGN, ARC_SECOND_SIGN, DEGREE_SIGN, FULL_TURN_DEG, HALF_TURN_DEG,
         MAX_DEGREE, MINUTES_IN_DEGREE, QUARTER_TURN_DEG, SECONDS_IN_MINUTE,
     },
-    errors::{AngleNotInRange, ParseAngleError},
+    errors::{OutOfRange, ParseAngleError},
     Angle, AngleNames, UnitsAngle,
 };
 
@@ -47,9 +47,9 @@ pub struct AccurateDegree {
 impl UnitsAngle for AccurateDegree {
     type Units = u32;
 
-    fn with_units(units: u32) -> Result<Self, AngleNotInRange> {
+    fn with_units(units: u32) -> Result<Self, OutOfRange> {
         if units > Self::max_units() {
-            return Err(AngleNotInRange::Degrees);
+            return Err(OutOfRange::Degrees);
         }
 
         Ok(Self { units })
@@ -123,10 +123,10 @@ impl AccurateDegree {
         quot
     }
 
-    fn with_deg_and_fraction(degrees: u16, fraction: u32) -> Result<Self, AngleNotInRange> {
+    fn with_deg_and_fraction(degrees: u16, fraction: u32) -> Result<Self, OutOfRange> {
         let valid_degrees = 0..=MAX_DEGREE;
         if !valid_degrees.contains(&degrees) {
-            return Err(AngleNotInRange::Degrees);
+            return Err(OutOfRange::Degrees);
         };
 
         let max_fraction_units = Self::micro_deg_in_deg();
@@ -138,11 +138,11 @@ impl AccurateDegree {
         };
 
         if !valid_fraction.contains(&fraction) {
-            return Err(AngleNotInRange::MicroDegrees);
+            return Err(OutOfRange::MicroDegrees);
         }
 
         let total_micro = u64::from(degrees) * u64::from(max_fraction_units) + u64::from(fraction);
-        let total_micro: u32 = convert_int(total_micro).ok_or(AngleNotInRange::Degrees)?;
+        let total_micro: u32 = convert_int(total_micro).ok_or(OutOfRange::Degrees)?;
 
         let units = Self::micro_deg_to_unit_coef() * total_micro;
         Ok(Self { units })
@@ -154,13 +154,13 @@ impl AccurateDegree {
     ///
     /// # Errors
     /// When some part of the angle is out of scope
-    /// (e.g. minutes > 60 or degree > 360), the `AngleNotInRange` returned.
+    /// (e.g. minutes > 60 or degree > 360), the `OutOfRange` returned.
     pub fn with_dms(
         degree: u16,
         minutes: u8,
         seconds: u8,
         centi_seconds: u8,
-    ) -> Result<Self, AngleNotInRange> {
+    ) -> Result<Self, OutOfRange> {
         Self::check_dms(degree, minutes, seconds, centi_seconds)?;
 
         // prevent further multiplication overflow by extending precision
@@ -172,7 +172,7 @@ impl AccurateDegree {
         let total_seconds = (total_minutes * sec_in_min) + u64::from(seconds);
         let total_cas = (total_seconds * centi) + u64::from(centi_seconds);
 
-        let total_cas: u32 = convert_int(total_cas).ok_or(AngleNotInRange::Degrees)?;
+        let total_cas: u32 = convert_int(total_cas).ok_or(OutOfRange::Degrees)?;
         Self::with_units(Self::cas_to_unit_coef() * total_cas)
     }
 
@@ -181,10 +181,10 @@ impl AccurateDegree {
         minutes: u8,
         seconds: u8,
         centi_seconds: u8,
-    ) -> Result<(), AngleNotInRange> {
+    ) -> Result<(), OutOfRange> {
         let valid_degrees = 0..=MAX_DEGREE;
         if !valid_degrees.contains(&degree) {
-            return Err(AngleNotInRange::Degrees);
+            return Err(OutOfRange::Degrees);
         }
 
         #[allow(clippy::cast_possible_truncation)]
@@ -196,15 +196,15 @@ impl AccurateDegree {
         };
 
         if !valid_minutes.contains(&minutes) {
-            return Err(AngleNotInRange::ArcMinutes);
+            return Err(OutOfRange::ArcMinutes);
         }
 
         if !valid_seconds.contains(&seconds) {
-            return Err(AngleNotInRange::ArcSeconds);
+            return Err(OutOfRange::ArcSeconds);
         }
 
         if !valid_centi.contains(&centi_seconds) {
-            return Err(AngleNotInRange::ArcCentiSeconds);
+            return Err(OutOfRange::ArcCentiSeconds);
         }
 
         Ok(())
@@ -321,31 +321,31 @@ lazy_static! {
 }
 
 impl TryFrom<(u16, u8, u8, u16)> for AccurateDegree {
-    type Error = AngleNotInRange;
+    type Error = OutOfRange;
 
     fn try_from(value: (u16, u8, u8, u16)) -> Result<Self, Self::Error> {
         let (deg, min, sec, centi) = value;
         // Why not have `centi: u8` right in the signature?
         // It is a workaround to allow to construct coordinates later
         // from a quadruples (u16, u8, u8, u16)
-        let centi = convert_int(centi).ok_or(AngleNotInRange::ArcCentiSeconds)?;
+        let centi = convert_int(centi).ok_or(OutOfRange::ArcCentiSeconds)?;
         Self::with_dms(deg, min, sec, centi)
     }
 }
 
 impl TryFrom<[u16; 4]> for AccurateDegree {
-    type Error = AngleNotInRange;
+    type Error = OutOfRange;
 
     fn try_from(value: [u16; 4]) -> Result<Self, Self::Error> {
         let [deg, min, sec, centi] = value;
-        let min = convert_int(min).ok_or(AngleNotInRange::ArcMinutes)?;
-        let sec = convert_int(sec).ok_or(AngleNotInRange::ArcSeconds)?;
-        let centi = convert_int(centi).ok_or(AngleNotInRange::ArcCentiSeconds)?;
+        let min = convert_int(min).ok_or(OutOfRange::ArcMinutes)?;
+        let sec = convert_int(sec).ok_or(OutOfRange::ArcSeconds)?;
+        let centi = convert_int(centi).ok_or(OutOfRange::ArcCentiSeconds)?;
         Self::with_dms(deg, min, sec, centi)
     }
 }
 
-try_from_tuples_and_arrays!((u16, u8, u8, u16; max=u16) -> <AccurateDegree, AngleNotInRange>);
+try_from_tuples_and_arrays!((u16, u8, u8, u16; max=u16) -> <AccurateDegree, OutOfRange>);
 
 #[cfg(test)]
 mod tests {
@@ -1071,7 +1071,7 @@ mod parse_tests {
     }
 
     #[test]
-    #[should_panic(expected = "AngleNotInRange(Degrees)")]
+    #[should_panic(expected = "Range(Degrees)")]
     fn bad_negative() {
         let _angle: AccurateDegree = "-54.12".parse().unwrap();
     }
@@ -1084,7 +1084,7 @@ mod parse_tests {
     }
 
     #[test]
-    #[should_panic(expected = "AngleNotInRange(Degrees)")]
+    #[should_panic(expected = "Range(Degrees)")]
     fn bad_too_big_for_angle() {
         let _angle: AccurateDegree = "364.123456".parse().unwrap();
     }
@@ -1177,7 +1177,7 @@ mod parse_tests {
     }
 
     #[test]
-    #[should_panic(expected = "AngleNotInRange(Degrees)")]
+    #[should_panic(expected = "Range(Degrees)")]
     fn overflow_in_domain_deg() {
         let _angle: AccurateDegree = "361°40′".parse().unwrap();
     }
@@ -1329,7 +1329,7 @@ mod parse_ascii_tests {
     }
 
     #[test]
-    #[should_panic(expected = "AngleNotInRange(Degrees)")]
+    #[should_panic(expected = "Range(Degrees)")]
     fn overflow_in_domain_deg() {
         let _angle: AccurateDegree = "361*40'".parse().unwrap();
     }

@@ -34,19 +34,19 @@ macro_rules! impl_angle_traits {
         }
 
         impl Angle for $t {
-            type NumErr = AngleNotInRange;
+            type NumErr = OutOfRange;
             type ParseErr = ParseAngleError;
 
             fn obtuse_err() -> Self::NumErr {
-                AngleNotInRange::ObtuseAngle
+                OutOfRange::ObtuseAngle
             }
 
             fn reflex_err() -> Self::NumErr {
-                AngleNotInRange::ReflexAngle
+                OutOfRange::ReflexAngle
             }
 
             fn turn_err() -> Self::NumErr {
-                AngleNotInRange::Degrees
+                OutOfRange::Degrees
             }
         }
     };
@@ -73,23 +73,23 @@ macro_rules! impl_conv_traits {
         }
 
         impl TryFrom<f64> for $t {
-            type Error = AngleNotInRange;
+            type Error = OutOfRange;
 
             /// Use with caution: the floating numbers has bad precision in the fraction part
             fn try_from(value: f64) -> Result<Self, Self::Error> {
                 if value.is_sign_negative() {
-                    return Err(AngleNotInRange::Degrees);
+                    return Err(OutOfRange::Degrees);
                 }
 
                 // prevent wrapping around
                 let integer = value.floor() as u64;
-                let integer = integer.try_into().map_err(|_| AngleNotInRange::Degrees)?;
+                let integer = integer.try_into().map_err(|_| OutOfRange::Degrees)?;
 
                 let precision = Self::$fraction_multiplier_func();
                 let fraction = (value.fract() * f64::from(precision)).round() as u64;
                 let fraction = fraction
                     .try_into()
-                    .map_err(|_| AngleNotInRange::DegreeFraction)?;
+                    .map_err(|_| OutOfRange::DegreeFraction)?;
 
                 // fraction part of the value rounds up to 1
                 if fraction == precision {

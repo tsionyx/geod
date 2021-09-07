@@ -217,10 +217,10 @@ macro_rules! bool_enum {
 ///
 /// ```compile_fail
 /// try_from_tuples_and_arrays!((u16, u8, u8, u16; max=u16) ->
-///     <Point4D, CoordNotInRange>);
+///     <Point4D, CoordOutOfRange>);
 ///
 /// try_from_tuples_and_arrays!((i16, u8, u8, u16; max=i16) ->
-///     <GenericPoint<T> where T: Debug, CoordNotInRange>);
+///     <GenericPoint<T> where T: Debug, CoordOutOfRange>);
 /// ```
 macro_rules! try_from_tuples_and_arrays {
     (($t1:ty, $t2:ty, $t3:ty, $t4:ty; max=$t_max:ty) -> <$target:ty $(where $T:tt: $Trait:ident)?, $err: ident>) => {
