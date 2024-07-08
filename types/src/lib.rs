@@ -29,7 +29,6 @@
 #![warn(single_use_lifetimes)]
 #![warn(trivial_casts)]
 #![warn(trivial_numeric_casts)]
-#![warn(unaligned_references)]
 // conflicts with the `clippy::redundant_pub_crate`
 #![allow(unreachable_pub)]
 // !!! NO UNSAFE

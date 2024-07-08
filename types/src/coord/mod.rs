@@ -2,11 +2,7 @@ use std::{convert::TryFrom, error::Error, fmt, str::FromStr};
 
 use crate::{angle::Angle, utils::StripChar};
 
-pub use self::{
-    lat::{Latitude, Pole},
-    lon::Longitude,
-    point::Point,
-};
+pub use self::{lat::Latitude, lon::Longitude, point::Point};
 
 mod lat;
 mod lon;
