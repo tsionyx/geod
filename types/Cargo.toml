@@ -12,7 +12,7 @@ categories = ["science"]
 
 
 [dependencies]
-regex = "1.3"
+regex = { version = "0.1", package = "regex-lite" }
 lazy_static = "1.4"
 num-traits = "0.2"
 
