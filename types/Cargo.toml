@@ -1,13 +1,13 @@
 [package]
 name = "geod-types"
 description = "Geodesy types and primitives"
-authors = ["Ivan Ladelshchikov <tsionyx@gmail.com>"]
+authors = ["Ivan L <tsionyx@gmail.com>"]
 license = "MIT"
 keywords = ["geodesy", "cartography"]
 readme = "./README.md"
 version = "0.1.1"
 repository = "https://github.com/tsionyx/geod"
-edition = "2018"
+edition = "2021"
 categories = ["science"]
 
 
