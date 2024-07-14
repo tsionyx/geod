@@ -37,7 +37,7 @@ impl fmt::Display for OutOfRange {
             Self::ArcMilliSeconds => "Angle's arc millisecond should be less than 1000",
         };
 
-        write!(f, "{}", msg)
+        write!(f, "{msg}")
     }
 }
 
@@ -60,9 +60,9 @@ impl fmt::Display for ParseAngleError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Cannot parse angle: ")?;
         match self {
-            Self::Range(inner) => write!(f, "{}", inner),
-            Self::Float(inner) => write!(f, "{}", inner),
-            Self::Int(inner) => write!(f, "{}", inner),
+            Self::Range(inner) => write!(f, "{inner}"),
+            Self::Float(inner) => write!(f, "{inner}"),
+            Self::Int(inner) => write!(f, "{inner}"),
             Self::DmsNotation => write!(f, "not a Degree-Minute-Second notation"),
         }
     }

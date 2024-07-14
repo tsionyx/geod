@@ -19,18 +19,23 @@ macro_rules! enum_trivial_from_impl {
     };
 }
 
+mod private {
+    #[derive(Debug, Copy, Clone)]
+    pub struct Token;
+}
+
 /// Allow conversion of a signed value into its unsigned equivalent
 /// by dropping the sign away
 pub trait ToUnsigned<U>: Default + Copy + PartialOrd + Neg<Output = Self> {
     /// represent the source (signed) type as target (unsigned) type
-    fn as_type(self) -> U;
+    fn as_type(self, token: private::Token) -> U;
 
     /// Converts to unsigned absolute value, also preserving the 'is negative' flag
     fn abs_and_sign(self) -> (U, bool) {
         if self >= Self::default() {
-            (self.as_type(), true)
+            (self.as_type(private::Token), true)
         } else {
-            ((-self).as_type(), false)
+            ((-self).as_type(private::Token), false)
         }
     }
 }
@@ -38,15 +43,19 @@ pub trait ToUnsigned<U>: Default + Copy + PartialOrd + Neg<Output = Self> {
 macro_rules! impl_abs_and_sign {
     ($from: tt -> $to: ty) => {
         impl ToUnsigned<$to> for $from {
-            fn as_type(self) -> $to {
+            // can not be called from another module
+            // with the protection of `Token`,
+            // therefore, the sign is always checked explicitly
+            #[allow(clippy::cast_sign_loss)]
+            fn as_type(self, _token: private::Token) -> $to {
                 self as $to
             }
         }
     };
 
     ($same: ty) => {
-        impl ToUnsigned<$same> for $same {
-            fn as_type(self) -> Self {
+        impl ToUnsigned<Self> for $same {
+            fn as_type(self, _token: private::Token) -> Self {
                 self
             }
         }

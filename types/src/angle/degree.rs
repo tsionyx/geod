@@ -77,16 +77,30 @@ macro_rules! impl_conv_traits {
 
             /// Use with caution: the floating numbers has bad precision in the fraction part
             fn try_from(value: f64) -> Result<Self, Self::Error> {
-                if value.is_sign_negative() {
-                    return Err(OutOfRange::Degrees);
+                fn f64_to_u64(value: f64) -> Result<u64, &'static str> {
+                    if value < 0.0 {
+                        return Err("Value cannot be negative");
+                    }
+
+                    #[allow(clippy::cast_precision_loss)]
+                    if value > u64::MAX as f64 {
+                        return Err("Value is too large for u64");
+                    }
+
+                    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                    Ok(value as u64)
                 }
 
                 // prevent wrapping around
-                let integer = value.floor() as u64;
+                let integer = f64_to_u64(value.floor()).map_err(|_| {
+                    assert!(value.is_sign_negative());
+                    OutOfRange::Degrees
+                })?;
                 let integer = integer.try_into().map_err(|_| OutOfRange::Degrees)?;
 
                 let precision = Self::$fraction_multiplier_func();
-                let fraction = (value.fract() * f64::from(precision)).round() as u64;
+                let fraction = (value.fract() * f64::from(precision)).round();
+                let fraction = f64_to_u64(fraction).map_err(|_| OutOfRange::DegreeFraction)?;
                 let fraction = fraction
                     .try_into()
                     .map_err(|_| OutOfRange::DegreeFraction)?;
@@ -187,23 +201,19 @@ pub(super) fn parse_dms_re(is_ascii: bool, arc_seconds_fd: usize) -> String {
         r#"(?x)                                 # enables verbose mode (to allow these comments)
         ^                                           # match the whole line from the start
         (?P<deg>[123]?\d{{1,2}})                        # mandatory degree VALUE (0..=399) - requires more validation!
-        {}                                              # degree sign (can be mandatory or optional)
+        {deg}                                           # degree sign (can be mandatory or optional)
         (?:\x20?                                        # minutes and seconds group optionally started with the space
             (?P<min>[0-5]?\d)                               # minutes VALUE (0..=59)
-            {}                                              # arcminute sign
+            {min}                                           # arcminute sign
             (?:\x20?                                        # seconds with the decimal fraction group optionally started with the space
                 (?P<sec>[0-5]?\d)                               # whole seconds VALUE (0..=59)
                 (?:                                             # fractions of arcsecond with the decimal dot
-                    \.(?P<sec_fract>\d{{1,{precision}}})            # fractions of arcsecond VALUE (up to [precision] digits, 0..=99)
+                    \.(?P<sec_fract>\d{{1,{arc_seconds_fd}}})       # fractions of arcsecond VALUE (up to [precision] digits, 0..=99)
                 )?                                              # fractions of arcsecond are optional
-                {}                                              # arcsecond sign
+                {sec}                                           # arcsecond sign
             )?                                              # seconds are optional
         )?                                              # minutes and seconds are optional
         $                                           # match the whole line till the end
         "#,
-        deg,
-        min,
-        sec,
-        precision = arc_seconds_fd
     )
 }

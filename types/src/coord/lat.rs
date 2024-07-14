@@ -137,6 +137,7 @@ impl<A: Angle> Neg for Latitude<A> {
 
     fn neg(self) -> Self::Output {
         let angle = self.angle_from_equator();
+        #[allow(clippy::option_if_let_else)]
         let opposite_pole = match self.hemisphere() {
             Some(pole) => -pole,
             // just a convention for equator, it means nothing when constructing a Latitude
@@ -157,9 +158,9 @@ impl<A: Angle> TryFrom<f64> for Latitude<A> {
     }
 }
 
-impl<A: Angle> TryFrom<(i8, u8, u8, u16)> for Latitude<A>
+impl<A> TryFrom<(i8, u8, u8, u16)> for Latitude<A>
 where
-    A: TryFrom<(u16, u8, u8, u16), Error = <A as Angle>::NumErr>,
+    A: Angle + TryFrom<(u16, u8, u8, u16), Error = <A as Angle>::NumErr>,
 {
     type Error = A::NumErr;
 
@@ -257,25 +258,24 @@ where
     }
 }
 
-impl<A: Angle> fmt::Display for Latitude<A>
+impl<A> fmt::Display for Latitude<A>
 where
-    A: fmt::Display,
+    A: Angle + fmt::Display,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let angle = self.angle_from_equator();
         if f.alternate() {
-            write!(f, "{:#}", angle)?;
+            write!(f, "{angle:#}")?;
 
             if let Some(hemisphere) = self.hemisphere() {
-                write!(f, "{:#}", hemisphere)
-            } else {
-                Ok(())
+                write!(f, "{hemisphere:#}")?;
             }
+            Ok(())
         } else {
-            if let Some(South) = self.hemisphere() {
+            if self.hemisphere() == Some(South) {
                 write!(f, "-")?;
             }
-            write!(f, "{}", angle)
+            write!(f, "{angle}")
         }
     }
 }

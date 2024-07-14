@@ -210,6 +210,9 @@ impl AccurateDegree {
         Ok(())
     }
 
+    // no panic is possible because the precision
+    // does not allow for too big whole-degree value (max=2^32 / 9*10^6 ~= 477)
+    #[allow(clippy::missing_panics_doc)]
     /// The whole number of degrees in the angle
     pub fn degrees(self) -> u16 {
         let degrees = self.units / Self::units_in_deg();
@@ -789,7 +792,7 @@ mod tests {
     #[test]
     fn print_zero_as_dms() {
         let d = AccurateDegree::default();
-        let s = format!("{:#}", d);
+        let s = format!("{d:#}");
         assert_eq!(s, "0°");
     }
 
@@ -802,14 +805,14 @@ mod tests {
     #[test]
     fn print_right_as_dms() {
         let d: AccurateDegree = 90.try_into().unwrap();
-        let s = format!("{:#}", d);
+        let s = format!("{d:#}");
         assert_eq!(s, "90°");
     }
 
     #[test]
     fn print_fraction_as_dms() {
         let d = AccurateDegree::from_deg_and_fraction(60, 546_718).unwrap();
-        let s = format!("{:#}", d);
+        let s = format!("{d:#}");
         assert_eq!(s, "60°32′48.18″");
     }
 
@@ -817,7 +820,7 @@ mod tests {
     fn print_fraction_as_dms_without_milli() {
         for f in 0..3 {
             let d = AccurateDegree::from_deg_and_fraction(60, 546_666 + f).unwrap();
-            let s = format!("{:#}", d);
+            let s = format!("{d:#}");
             assert_eq!(s, "60°32′48″");
         }
     }
@@ -826,7 +829,7 @@ mod tests {
     fn print_fraction_as_dms_without_seconds() {
         for f in 0..3 {
             let d = AccurateDegree::from_deg_and_fraction(60, 533_332 + f).unwrap();
-            let s = format!("{:#}", d);
+            let s = format!("{d:#}");
             assert_eq!(s, "60°32′");
         }
     }
@@ -834,7 +837,7 @@ mod tests {
     #[test]
     fn print_overflow_fraction_as_dms() {
         let d = AccurateDegree::from_deg_and_fraction(59, 999_999).unwrap();
-        let s = format!("{:#}", d);
+        let s = format!("{d:#}");
         assert_eq!(s, "60°");
     }
 

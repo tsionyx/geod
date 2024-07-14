@@ -94,6 +94,12 @@ impl<A: Angle> Longitude<A> {
         }
     }
 
+    // no panic is possible because
+    // the angle always stays:
+    // - (angle - PI) for angle >= PI     (>= 0)
+    // - (angle + PI) for angle < PI      (< 2*PI)
+    #[allow(clippy::missing_panics_doc)]
+    #[must_use]
     /// Diametrically opposite meridian
     /// which together with the current one defines
     /// the hemisphere (great circle)
@@ -203,9 +209,9 @@ impl<A: Angle> TryFrom<f64> for Longitude<A> {
     }
 }
 
-impl<A: Angle> TryFrom<(i16, u8, u8, u16)> for Longitude<A>
+impl<A> TryFrom<(i16, u8, u8, u16)> for Longitude<A>
 where
-    A: TryFrom<(u16, u8, u8, u16), Error = <A as Angle>::NumErr>,
+    A: Angle + TryFrom<(u16, u8, u8, u16), Error = <A as Angle>::NumErr>,
 {
     type Error = A::NumErr;
 
@@ -295,26 +301,25 @@ where
     }
 }
 
-impl<A: Angle> fmt::Display for Longitude<A>
+impl<A> fmt::Display for Longitude<A>
 where
-    A: fmt::Display,
+    A: Angle + fmt::Display,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let angle = self.angle();
 
         if f.alternate() {
-            write!(f, "{:#}", angle)?;
+            write!(f, "{angle:#}")?;
 
             if let Some(direction) = self.direction() {
-                write!(f, "{:#}", direction)
-            } else {
-                Ok(())
+                write!(f, "{direction:#}")?;
             }
+            Ok(())
         } else {
-            if let Some(West) = self.direction() {
+            if self.direction() == Some(West) {
                 write!(f, "-")?;
             }
-            write!(f, "{}", angle)
+            write!(f, "{angle}")
         }
     }
 }

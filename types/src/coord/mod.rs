@@ -25,7 +25,7 @@ impl<A: Error> fmt::Display for ParseCoordinateError<A> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Coordinate parsing failed: ")?;
         match self {
-            Self::Angle(inner) => write!(f, "{}", inner),
+            Self::Angle(inner) => write!(f, "{inner}"),
             Self::EmptyString => write!(f, "empty string provided"),
             Self::NoHemisphere => write!(f, "direction (hemisphere) was not detected"),
         }
@@ -128,7 +128,7 @@ macro_rules! bool_enum {
     ($name:ident: $truthy:ident and $falsy:ident; parse from $true_ch:literal:$false_ch:literal with $parse_err:ident) => {
         use self::$name::{$falsy, $truthy};
 
-        #[derive(Debug, Copy, Clone, PartialEq)]
+        #[derive(Debug, Copy, Clone, PartialEq, Eq)]
         pub enum $name {
             $truthy,
             $falsy,

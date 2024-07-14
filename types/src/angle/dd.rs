@@ -178,6 +178,9 @@ impl DecimalDegree {
         Ok(())
     }
 
+    // no panic is possible because the precision
+    // does not allow for too big whole-degree value (max=2^32 / 10^7 ~= 429)
+    #[allow(clippy::missing_panics_doc)]
     /// The whole number of degrees in the angle
     pub fn degrees(self) -> u16 {
         let degrees = self.units / Self::units_in_deg();
@@ -760,7 +763,7 @@ mod tests {
     #[test]
     fn print_zero_as_dms() {
         let d = DecimalDegree::default();
-        let s = format!("{:#}", d);
+        let s = format!("{d:#}");
         assert_eq!(s, "0°");
     }
 
@@ -773,14 +776,14 @@ mod tests {
     #[test]
     fn print_right_as_dms() {
         let d: DecimalDegree = 90.try_into().unwrap();
-        let s = format!("{:#}", d);
+        let s = format!("{d:#}");
         assert_eq!(s, "90°");
     }
 
     #[test]
     fn print_fraction_as_dms() {
         let d = DecimalDegree::from_deg_and_fraction(60, 5_467_182).unwrap();
-        let s = format!("{:#}", d);
+        let s = format!("{d:#}");
         assert_eq!(s, "60°32′48.186″");
     }
 
@@ -788,7 +791,7 @@ mod tests {
     fn print_fraction_as_dms_without_milli() {
         for f in 0..3 {
             let d = DecimalDegree::from_deg_and_fraction(60, 5_466_666 + f).unwrap();
-            let s = format!("{:#}", d);
+            let s = format!("{d:#}");
             assert_eq!(s, "60°32′48″");
         }
     }
@@ -797,7 +800,7 @@ mod tests {
     fn print_fraction_as_dms_without_seconds() {
         for f in 0..3 {
             let d = DecimalDegree::from_deg_and_fraction(60, 5_333_332 + f).unwrap();
-            let s = format!("{:#}", d);
+            let s = format!("{d:#}");
             assert_eq!(s, "60°32′");
         }
     }
@@ -805,7 +808,7 @@ mod tests {
     #[test]
     fn print_overflow_fraction_as_dms() {
         let d = DecimalDegree::from_deg_and_fraction(59, 9_999_999).unwrap();
-        let s = format!("{:#}", d);
+        let s = format!("{d:#}");
         assert_eq!(s, "60°");
     }
 
@@ -858,7 +861,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "assertion failed")]
+    #[should_panic(expected = "sum overflowed")]
     fn summing_dms_accumulate_errors() {
         let min = DecimalDegree::from_dms(0, 0, 0, 1).unwrap();
 
@@ -868,7 +871,7 @@ mod tests {
             acc = acc + min;
         }
 
-        assert_eq!(acc.milli_arc_seconds(), 10);
+        assert_eq!(acc.milli_arc_seconds(), 10, "sum overflowed");
     }
 
     #[test]

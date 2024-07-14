@@ -26,7 +26,7 @@ pub struct Point<A: Angle> {
 
 impl<A: Angle> Point<A> {
     /// Construct a point from the given latitude and longitude
-    pub fn new(lat: Latitude<A>, lon: Longitude<A>) -> Self {
+    pub const fn new(lat: Latitude<A>, lon: Longitude<A>) -> Self {
         Self { lat, lon }
     }
 
@@ -63,6 +63,7 @@ impl<A: Angle> Point<A> {
         self.lat.is_pole()
     }
 
+    #[must_use]
     /// The diametrically opposite point
     pub fn antipodal(&self) -> Self {
         Self {
@@ -89,9 +90,9 @@ impl<A: Angle> PartialEq for Point<A> {
     }
 }
 
-impl<A: Angle> fmt::Display for Point<A>
+impl<A> fmt::Display for Point<A>
 where
-    A: fmt::Display,
+    A: Angle + fmt::Display,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if f.alternate() {
@@ -121,8 +122,8 @@ mod tests_accur {
         assert!(sp.lon.angle().is_zero());
         assert!(sp.lon.direction().is_none());
 
-        assert_eq!(format!("{}", sp), "(-90°,0°)");
-        assert_eq!(format!("{:#}", sp), "Lat: 90°S, Long: 0°");
+        assert_eq!(format!("{sp}"), "(-90°,0°)");
+        assert_eq!(format!("{sp:#}"), "Lat: 90°S, Long: 0°");
     }
 
     #[test]
@@ -134,8 +135,8 @@ mod tests_accur {
         assert!(origin.lon.angle().is_zero());
         assert!(origin.lon.direction().is_none());
 
-        assert_eq!(format!("{}", origin), "(0°,0°)");
-        assert_eq!(format!("{:#}", origin), "Lat: 0°, Long: 0°");
+        assert_eq!(format!("{origin}"), "(0°,0°)");
+        assert_eq!(format!("{origin:#}"), "Lat: 0°, Long: 0°");
     }
 
     #[test]
@@ -163,9 +164,9 @@ mod tests_accur {
         );
         assert_eq!(saint_petersburg.lon.direction(), Some(East));
 
-        assert_eq!(format!("{}", saint_petersburg), "(59.937500°,30.308611°)");
+        assert_eq!(format!("{saint_petersburg}"), "(59.937500°,30.308611°)");
         assert_eq!(
-            format!("{:#}", saint_petersburg),
+            format!("{saint_petersburg:#}"),
             "Lat: 59°56′15″N, Long: 30°18′31″E"
         );
     }
@@ -195,8 +196,8 @@ mod tests_accur {
         );
         assert_eq!(santiago.lon.direction(), Some(West));
 
-        assert_eq!(format!("{}", santiago), "(-33.450000°,-70.666667°)");
-        assert_eq!(format!("{:#}", santiago), "Lat: 33°27′S, Long: 70°40′W");
+        assert_eq!(format!("{santiago}"), "(-33.450000°,-70.666667°)");
+        assert_eq!(format!("{santiago:#}"), "Lat: 33°27′S, Long: 70°40′W");
     }
 
     #[test]
@@ -215,11 +216,8 @@ mod tests_accur {
         );
         assert_eq!(point.lon.direction(), Some(East));
 
-        assert_eq!(format!("{}", point), "(-33.462222°,70.671044°)");
-        assert_eq!(
-            format!("{:#}", point),
-            "Lat: 33°27′44″S, Long: 70°40′15.76″E"
-        );
+        assert_eq!(format!("{point}"), "(-33.462222°,70.671044°)");
+        assert_eq!(format!("{point:#}"), "Lat: 33°27′44″S, Long: 70°40′15.76″E");
     }
 
     #[test]
@@ -238,9 +236,9 @@ mod tests_accur {
         );
         assert_eq!(point.lon.direction(), Some(West));
 
-        assert_eq!(format!("{}", point), "(33.462314°,-167.183900°)");
+        assert_eq!(format!("{point}"), "(33.462314°,-167.183900°)");
         assert_eq!(
-            format!("{:#}", point),
+            format!("{point:#}"),
             "Lat: 33°27′44.33″N, Long: 167°11′2.04″W"
         );
     }
@@ -286,8 +284,8 @@ mod tests_dec {
         assert!(sp.lon.angle().is_zero());
         assert!(sp.lon.direction().is_none());
 
-        assert_eq!(format!("{}", sp), "(-90°,0°)");
-        assert_eq!(format!("{:#}", sp), "Lat: 90°S, Long: 0°");
+        assert_eq!(format!("{sp}"), "(-90°,0°)");
+        assert_eq!(format!("{sp:#}"), "Lat: 90°S, Long: 0°");
     }
 
     #[test]
@@ -299,8 +297,8 @@ mod tests_dec {
         assert!(origin.lon.angle().is_zero());
         assert!(origin.lon.direction().is_none());
 
-        assert_eq!(format!("{}", origin), "(0°,0°)");
-        assert_eq!(format!("{:#}", origin), "Lat: 0°, Long: 0°");
+        assert_eq!(format!("{origin}"), "(0°,0°)");
+        assert_eq!(format!("{origin:#}"), "Lat: 0°, Long: 0°");
     }
 
     #[test]
@@ -328,9 +326,9 @@ mod tests_dec {
         );
         assert_eq!(saint_petersburg.lon.direction(), Some(East));
 
-        assert_eq!(format!("{}", saint_petersburg), "(59.9375000°,30.3086111°)");
+        assert_eq!(format!("{saint_petersburg}"), "(59.9375000°,30.3086111°)");
         assert_eq!(
-            format!("{:#}", saint_petersburg),
+            format!("{saint_petersburg:#}"),
             "Lat: 59°56′15″N, Long: 30°18′31″E"
         );
     }
@@ -360,8 +358,8 @@ mod tests_dec {
         );
         assert_eq!(santiago.lon.direction(), Some(West));
 
-        assert_eq!(format!("{}", santiago), "(-33.4500000°,-70.6666667°)");
-        assert_eq!(format!("{:#}", santiago), "Lat: 33°27′S, Long: 70°40′W");
+        assert_eq!(format!("{santiago}"), "(-33.4500000°,-70.6666667°)");
+        assert_eq!(format!("{santiago:#}"), "Lat: 33°27′S, Long: 70°40′W");
     }
 
     #[test]
@@ -380,9 +378,9 @@ mod tests_dec {
         );
         assert_eq!(point.lon.direction(), Some(East));
 
-        assert_eq!(format!("{}", point), "(-33.4622222°,70.6710439°)");
+        assert_eq!(format!("{point}"), "(-33.4622222°,70.6710439°)");
         assert_eq!(
-            format!("{:#}", point),
+            format!("{point:#}"),
             "Lat: 33°27′44″S, Long: 70°40′15.758″E"
         );
     }
@@ -403,9 +401,9 @@ mod tests_dec {
         );
         assert_eq!(point.lon.direction(), Some(West));
 
-        assert_eq!(format!("{}", point), "(33.4623147°,-167.1839014°)");
+        assert_eq!(format!("{point}"), "(33.4623147°,-167.1839014°)");
         assert_eq!(
-            format!("{:#}", point),
+            format!("{point:#}"),
             "Lat: 33°27′44.333″N, Long: 167°11′2.045″W"
         );
     }

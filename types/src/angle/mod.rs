@@ -88,6 +88,7 @@ pub trait Angle:
         Self::straight().checked_sub(&self)
     }
 
+    #[must_use]
     /// Adjacent angle which sum to a [complete](trait.AngleNames.html#tymethod.complete) angle
     fn explement(self) -> Self {
         Self::complete()
@@ -95,6 +96,7 @@ pub trait Angle:
             .expect("Current implementation stores angles <=360 degrees")
     }
 
+    #[must_use]
     /// Difference between the angles by modulo independent of the order
     fn abs_diff(self, rhs: Self) -> Self {
         let diff = self.checked_sub(&rhs).or_else(|| rhs.checked_sub(&self));
@@ -146,7 +148,8 @@ pub trait Angle:
     }
 }
 
-pub(super) trait UnitsAngle: Angle {
+#[allow(clippy::module_name_repetitions)]
+pub trait UnitsAngle: Angle {
     type Units: CheckedAdd + CheckedSub;
 
     fn from_units(u: Self::Units) -> Result<Self, Self::NumErr>;
